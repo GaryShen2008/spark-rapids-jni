@@ -143,6 +143,7 @@ add_library(
   src/RowConversionJni.cpp
   src/NativeParquetJni.cpp
   src/row_conversion.cu
+  src/CudaIPCJni.cpp
 )
 
 set_target_properties(
