@@ -28,4 +28,4 @@ ${MVN} clean package ${MVN_MIRROR}  \
   -DCPP_PARALLEL_LEVEL=${PARALLEL_LEVEL} \
   -Dlibcudf.build.configure=true \
   -DUSE_GDS=ON -Dtest=*,!CuFileTest,!CudaFatalTest \
-  -DBUILD_TESTS=ON
+  -DBUILD_TESTS=ON -DskipTests
