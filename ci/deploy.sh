@@ -76,4 +76,4 @@ $DEPLOY_CMD -Durl=$SERVER_URL -DrepositoryId=$SERVER_ID \
             -Dfile=$FPATH.jar -DpomFile=pom.xml \
             -Dfiles=$CLASS_FILES \
             -Dtypes=$CLASS_TYPES \
-            -Dclassifiers=$CLASSIFIERS
+            -Dclassifiers=$CLASSIFIERS $ADDITIONAL_PARAMS
