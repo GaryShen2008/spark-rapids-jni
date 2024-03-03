@@ -57,6 +57,11 @@ if [[ "${cudf_sha}" == "${cudf_prev_sha}" ]]; then
   exit 0
 fi
 
+echo "Try update cudf submodule to ${cudf_sha}..."
+git add .
+git diff-index --quiet HEAD || git commit -s -m "Update submodule cudf to ${cudf_sha}"
+sha=$(git rev-parse HEAD)
+
 echo "Test against ${cudf_sha}..."
 
 MVN="mvn -Dmaven.wagon.http.retryHandler.count=3 -B"
