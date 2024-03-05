@@ -15,7 +15,7 @@
 #
 
 if(NOT DEFINED rapids-cmake-dir)
-  include(./fetch_rapids.cmake)
+  include(../cudf/rapids_config.cmake)
 endif()
 
 include(rapids-cpm)
