@@ -18,7 +18,7 @@ string(TOLOWER "${CUDF_DEPENDENCY_PIN_MODE}" CUDF_DEPENDENCY_PIN_MODE)
 if(NOT (CUDF_DEPENDENCY_PIN_MODE STREQUAL pinned OR
         CUDF_DEPENDENCY_PIN_MODE STREQUAL latest))
   message(FATAL_ERROR "The CUDF_DEPENDENCY_PIN_MODE variable must be set to either `pinned` or `latest`.")
- endif()
+endif()
 
 function(set_rapids_cmake_pin_sha1)
   set(rapids-cmake-sha "${rapids-cmake-sha}" PARENT_SCOPE)
