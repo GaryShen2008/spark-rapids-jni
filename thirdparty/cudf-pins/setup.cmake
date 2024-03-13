@@ -35,8 +35,10 @@ if(CUDF_DEPENDENCY_PIN_MODE STREQUAL pinned)
   string(STRIP rapids-cmake-sha "${rapids-cmake-sha}")
   string(REPLACE "\n" "" rapids-cmake-sha "${rapids-cmake-sha}")
   set(rapids-cmake-sha "${rapids-cmake-sha}" CACHE STRING "rapids-cmake sha to use" FORCE)
+  message(STATUS "Pinning rapids-cmake SHA1 [${rapids-cmake-sha}]")
+else()
+  set(rapids-cmake-fetch-via-git "ON" CACHE STRING "Make sure rapids-cmake is cloned so we can get SHA value" FORCE)
 endif()
-message(STATUS "Pinning rapids-cmake SHA1 [${rapids-cmake-sha}]")
 
 # We need to use a project() call hook, since rapids-cmake cpm_init()
 # can't be called from a `-C` CMake file
