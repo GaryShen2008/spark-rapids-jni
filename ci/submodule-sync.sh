@@ -105,8 +105,6 @@ sha=$(git rev-parse HEAD)
 # push the intermediate branch and create PR against REF
 # if test passed, it will try auto-merge the PR
 # if test failed, it will only comment the test result in the PR
-echo "test pass: ${test_pass}"
-exit 0
 git push https://${GIT_USER}:${GIT_TOKEN}@${REPO_LOC} ${INTERMEDIATE_HEAD}
 sleep 30 # sleep for a while to avoid inconsistent sha between HEAD branch and GitHub REST API
 $WORKSPACE/.github/workflows/action-helper/python/submodule-sync \
