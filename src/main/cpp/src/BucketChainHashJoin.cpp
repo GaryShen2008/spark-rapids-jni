@@ -19,15 +19,15 @@
 
 extern "C" {
 
-JNIEXPORT jlong JNICALL Java_com_nvidia_spark_rapids_jni_BucketChainHashJoin_innerJoinGatherMaps(
+JNIEXPORT jlongArray JNICALL Java_com_nvidia_spark_rapids_jni_BucketChainHashJoin_innerJoinGatherMaps(
   JNIEnv* env, jclass, jlong j_left_keys, jlong j_right_keys, jboolean compare_nulls_equal)
 {
   try {
     cudf::jni::auto_set_device(env);
     auto const left_table = reinterpret_cast<cudf::table_view const*>(j_left_keys);
     auto const right_table = reinterpret_cast<cudf::table_view const*>(j_right_keys);
-    return cudf::jni::release_as_jlong(
-      spark_rapids_jni::join_gather_maps(left_table, right_table, compare_nulls_equal));
+    return
+      spark_rapids_jni::join_gather_maps(left_table, right_table, compare_nulls_equal);
   }
   CATCH_STD(env, 0);
 }
