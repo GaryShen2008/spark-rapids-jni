@@ -16,10 +16,11 @@
 #pragma once
 
 namespace spark_rapids_jni {
-    std::unique_ptr<cudf::table_view> join_gather_maps(
-        cudf::table_view const& left_table,
-        cudf::table_view const& right_table,
-        bool compare_nulls_equal,
-        rmm::device_async_resource_ref mr = rmm::mr::get_current_device_resource()
-    );
+    std::pair<std::unique_ptr<rmm::device_uvector<size_type>>,
+              std::unique_ptr<rmm::device_uvector<size_type>>>
+    inner_join(table_view const& left_input,
+               table_view const& right_input,
+               null_equality compare_nulls,
+               rmm::cuda_stream_view stream      = cudf::get_default_stream(),
+               rmm::device_async_resource_ref mr = rmm::mr::get_current_device_resource());
 }

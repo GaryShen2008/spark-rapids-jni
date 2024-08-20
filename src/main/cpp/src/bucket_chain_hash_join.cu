@@ -4,19 +4,25 @@ namespace spark_rapids_jni {
 
 namespace detail {
 
+std::pair<std::unique_ptr<rmm::device_uvector<size_type>>,
+              std::unique_ptr<rmm::device_uvector<size_type>>>
+inner_join(table_view const& left_input,
+               table_view const& right_input,
+               null_equality compare_nulls,
+               rmm::cuda_stream_view stream
+               rmm::device_async_resource_ref mr){
+
 }
 
-std::unique_ptr<table_view> join_gather_maps(table_view const& left_table,
-                                        table_view const& right_table,
-                                        bool compare_nulls_equal,
-                                        rmm::device_async_resource_ref mr)
-{
-    CUDF_FUNC_RANGE();
-    return detail::join_gather_maps(
-        left_table,
-        right_table,
-        compare
+} // detail
 
-    );
+std::pair<std::unique_ptr<rmm::device_uvector<size_type>>,
+              std::unique_ptr<rmm::device_uvector<size_type>>>
+inner_join(table_view const& left_input,
+               table_view const& right_input,
+               null_equality compare_nulls,
+               rmm::cuda_stream_view stream
+               rmm::device_async_resource_ref mr){
+    return detail::inner_join(left_input, right_input, stream, mr);
 }
 }
