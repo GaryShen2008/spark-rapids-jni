@@ -4,6 +4,7 @@ namespace spark_rapids_jni {
 
 namespace detail {
 
+
 std::pair<std::unique_ptr<rmm::device_uvector<size_type>>,
               std::unique_ptr<rmm::device_uvector<size_type>>>
 inner_join(table_view const& left_input,
@@ -11,7 +12,8 @@ inner_join(table_view const& left_input,
                null_equality compare_nulls,
                rmm::cuda_stream_view stream
                rmm::device_async_resource_ref mr){
-
+    // Dummy implementation
+    return {};
 }
 
 } // detail
