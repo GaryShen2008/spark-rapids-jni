@@ -16,12 +16,14 @@
 
 package com.nvidia.spark.rapids.jni;
 
-import ai.rapids.cudf.CudfException;
-import ai.rapids.cudf.DeviceMemoryBuffer;
-import ai.rapids.cudf.Table;
-import ai.rapids.cudf.GatherMap;
+import ai.rapids.cudf.*;
 
 public class BucketChainHashJoin {
+
+    static {
+        NativeDepsLoader.loadNativeDeps();
+    }
+
     public static GatherMap[] innerJoinGatherMaps(Table leftTable, Table rightTable, boolean compareNullsEqual ){
         if (leftTable.getNumberOfColumns() != rightTable.getNumberOfColumns()) {
             throw new IllegalArgumentException("Column count mismatch, this: " + leftTable.getNumberOfColumns() +
@@ -44,6 +46,5 @@ public class BucketChainHashJoin {
         return maps;
     }
 
-    private static native long[] innerJoinGatherMaps(long leftKeys, long rightKeys,
-                                                     boolean compareNullsEqual) throws CudfException;
+    private static native long[] innerJoinGatherMaps(long leftKeys, long rightKeys, boolean compareNullsEqual);
 }

@@ -14,13 +14,18 @@
  * limitations under the License.
  */
 #pragma once
+#include <cudf/types.hpp>
+#include <cudf/table/table_view.hpp>
+
+#include <rmm/cuda_stream_view.hpp>
+#include <rmm/resource_ref.hpp>
 
 namespace spark_rapids_jni {
-    std::pair<std::unique_ptr<rmm::device_uvector<size_type>>,
-              std::unique_ptr<rmm::device_uvector<size_type>>>
-    inner_join(table_view const& left_input,
-               table_view const& right_input,
-               null_equality compare_nulls,
+    std::pair<std::unique_ptr<rmm::device_uvector<cudf::size_type>>,
+              std::unique_ptr<rmm::device_uvector<cudf::size_type>>>
+    inner_join(cudf::table_view const& left_input,
+               cudf::table_view const& right_input,
+               cudf::null_equality compare_nulls,
                rmm::cuda_stream_view stream      = cudf::get_default_stream(),
                rmm::device_async_resource_ref mr = rmm::mr::get_current_device_resource());
 }

@@ -17,6 +17,9 @@
 #include "cudf_jni_apis.hpp"
 #include "bucket_chain_hash_join.hpp"
 
+using cudf::jni::ptr_as_jlong;
+using cudf::jni::release_as_jlong;
+
 namespace rapids {
 namespace jni {
 
@@ -68,14 +71,16 @@ extern "C" {
 JNIEXPORT jlongArray JNICALL Java_com_nvidia_spark_rapids_jni_BucketChainHashJoin_innerJoinGatherMaps(
   JNIEnv* env, jclass, jlong j_left_keys, jlong j_right_keys, jboolean compare_nulls_equal)
 {
-    return rapids::jni::join_gather_maps(
-        env,
-        j_left_keys,
-        j_right_key,
-        compare_nulls_equal,
-        [](cudf::table_view const& left, cudf::table_view const& right, cudf::null_equality nulleq) {
-              return spark_rapids_jni::inner_join(left, right, nulleq);
-    });
-  CATCH_STD(env, 0);
+    try{
+        return rapids::jni::join_gather_maps(
+            env,
+            j_left_keys,
+            j_right_keys,
+            compare_nulls_equal,
+            [](cudf::table_view const& left, cudf::table_view const& right, cudf::null_equality nulleq) {
+                return spark_rapids_jni::inner_join(left, right, nulleq);
+        });
+    }
+    CATCH_STD(env, 0);
 }
 }  // extern "C"
