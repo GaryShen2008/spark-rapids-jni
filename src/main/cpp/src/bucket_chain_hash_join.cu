@@ -6,7 +6,11 @@
 #include <cudf/types.hpp>
 #include <cudf/table/table_view.hpp>
 
+#include <iostream>
+#include <memory>
+
 using namespace cudf;
+using size_type = cudf::size_type;
 
 namespace spark_rapids_jni {
 
@@ -18,8 +22,18 @@ inner_join(table_view const& left_input,
            null_equality compare_nulls,
            rmm::cuda_stream_view stream,
            rmm::device_async_resource_ref mr){
-    // Dummy implementation
-    return {};
+    // Allocate device_uvector with 5 elements
+    auto left_vector = std::make_unique<rmm::device_uvector<size_type>>(5, stream, mr);
+    auto right_vector = std::make_unique<rmm::device_uvector<size_type>>(5, stream, mr);
+
+    // Example: Fill vectors with dummy values (e.g., 0, 1, 2, 3, 4)
+    std::vector<size_type> host_values = {0, 1, 2, 3, 4};
+    cudaMemcpyAsync(left_vector->data(), host_values.data(), host_values.size() * sizeof(size_type), cudaMemcpyHostToDevice, stream.value());
+    cudaMemcpyAsync(right_vector->data(), host_values.data(), host_values.size() * sizeof(size_type), cudaMemcpyHostToDevice, stream.value());
+
+    // Return a pair of unique_ptrs to the vectors
+    return {std::move(left_vector), std::move(right_vector)};
+
 }
 
 } // detail

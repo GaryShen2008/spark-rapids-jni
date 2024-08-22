@@ -17,6 +17,9 @@
 #include "cudf_jni_apis.hpp"
 #include "bucket_chain_hash_join.hpp"
 
+#include <rmm/device_buffer.hpp>
+#include <iostream>
+
 using cudf::jni::ptr_as_jlong;
 using cudf::jni::release_as_jlong;
 
@@ -31,19 +34,24 @@ namespace jni {
 //   3: Device address of the gather map for the right table
 //   4: Host address of the rmm::device_buffer instance that owns the right gather map data
 jlongArray gather_maps_to_java(
-  JNIEnv* env,
-  std::pair<std::unique_ptr<rmm::device_uvector<cudf::size_type>>,
+    JNIEnv* env,
+    std::pair<std::unique_ptr<rmm::device_uvector<cudf::size_type>>,
             std::unique_ptr<rmm::device_uvector<cudf::size_type>>> maps)
 {
+    std::cout<< "First Size:" <<  sizeof(maps.first) <<std::endl;
+    std::cout<< "First Size:" <<  sizeof(maps.second) <<std::endl;
+
   // release the underlying device buffer to Java
   auto left_map_buffer  = std::make_unique<rmm::device_buffer>(maps.first->release());
   auto right_map_buffer = std::make_unique<rmm::device_buffer>(maps.second->release());
+
   cudf::jni::native_jlongArray result(env, 5);
   result[0] = static_cast<jlong>(left_map_buffer->size());
   result[1] = ptr_as_jlong(left_map_buffer->data());
   result[2] = release_as_jlong(left_map_buffer);
   result[3] = ptr_as_jlong(right_map_buffer->data());
   result[4] = release_as_jlong(right_map_buffer);
+
   return result.get_jArray();
 }
 
