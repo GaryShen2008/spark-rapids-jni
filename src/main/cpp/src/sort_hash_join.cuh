@@ -40,7 +40,7 @@ public:
 
 
     void test_column_factories() {
-       std::cout << "Hello I am here: " std::endl;
+       std::cout << "Hello I am here: " << std::endl;
     }
 
     ~SortHashJoin() {}
