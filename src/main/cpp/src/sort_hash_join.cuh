@@ -8,6 +8,9 @@
 #include <rmm/device_uvector.hpp>
 #include <iostream>
 
+#include <thrust/iterator/counting_iterator.h>
+#include <thrust/transform.h>
+
 class SortHashJoin {
 
 public:
@@ -53,7 +56,7 @@ public:
             int n_partitions = 10;
 
             // Create a numeric column of INT32 with n_partitions elements
-            auto r_offsets = cudf::make_numeric_column(cudf::data_type{cudf::type_id::INT32}, n_partitions);
+            auto r_offsets = make_numeric_column(cudf::data_type{cudf::type_id::INT32}, n_partitions);
 
             // Fill the column with some data
             {
