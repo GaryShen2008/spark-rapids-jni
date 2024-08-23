@@ -15,7 +15,7 @@
 class SortHashJoin {
 
 public:
-    explicit SortHashJoin(cudf::table_view& r_in, cudf::table_view& s_in, int first_bit,  int radix_bits, int circular_buffer_size)
+    explicit SortHashJoin(cudf::table_view r_in, cudf::table_view s_in, int first_bit,  int radix_bits, int circular_buffer_size)
     : r(r_in)
     , s(s_in)
     , first_bit(first_bit)
