@@ -3,6 +3,7 @@ package com.nvidia.spark.rapids.jni;
 import ai.rapids.cudf.GatherMap;
 import ai.rapids.cudf.Table;
 import org.junit.jupiter.api.Test;
+
 public class SortHashJoinTest {
     @Test
     void testSortHashJoin() {
@@ -18,5 +19,6 @@ public class SortHashJoinTest {
         GatherMap[] map = BucketChainHashJoin.innerJoinGatherMaps(left, right,  true);
         long rows = map[0].getRowCount();
         System.out.println(rows);
+
     }
 }

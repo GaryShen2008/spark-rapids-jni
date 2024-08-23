@@ -1,5 +1,12 @@
 #pragma once
+
 #include <cudf/table/table_view.hpp>
+#include <cudf/column/column.hpp>
+#include <cudf/column/column_view.hpp>
+#include <cudf/types.hpp>
+#include <rmm/device_buffer.hpp>
+#include <rmm/device_uvector.hpp>
+#include <iostream>
 
 class SortHashJoin {
 
@@ -11,6 +18,7 @@ public:
     , circular_buffer_size(circular_buffer_size)
     , radix_bits(radix_bits)
     {
+        test_mem();
         // first_bit, radix bits, int circular_buffer_size: Parameters for partitioning and buffer size.
         // nr and ns store the number of items in r and s
         // n_partitions calculated the number of partitions based on radix_bits.
@@ -25,6 +33,47 @@ public:
         // Match indices (r_match_idx, s_match_idx) if late materialization is used.
         // Create CUDA Events for measuring execution time.
     }
+
+    // Function to print the column data
+    void print_column(const cudf::column_view& col) {
+        // Transfer data from device to host
+        std::vector<int> host_data(col.size());
+        cudaMemcpy(host_data.data(), col.data<int>(), col.size() * sizeof(int), cudaMemcpyDeviceToHost);
+
+        // Print data
+        for (int i = 0; i < col.size(); ++i) {
+            std::cout << host_data[i] << " ";
+        }
+        std::cout << std::endl;
+    }
+
+    void test_mem(){
+
+            // Number of partitions
+            int n_partitions = 10;
+
+            // Create a numeric column of INT32 with n_partitions elements
+            auto r_offsets = cudf::make_numeric_column(cudf::data_type{cudf::type_id::INT32}, n_partitions);
+
+            // Fill the column with some data
+            {
+                // Get a mutable view of the column
+                auto r_offsets_view = r_offsets->mutable_view();
+
+                // Create a device vector to hold data
+                rmm::device_uvector<int> d_data(n_partitions, rmm::cuda_stream_default);
+
+                // Fill the device vector with incremental values
+                thrust::sequence(thrust::device, d_data.begin(), d_data.end(), 0);
+
+                // Copy data from device vector to column
+                cudaMemcpy(r_offsets_view.data<int>(), d_data.data(), n_partitions * sizeof(int), cudaMemcpyDeviceToDevice);
+            }
+
+            // Print the column
+            print_column(r_offsets->view());
+    }
+
 
     ~SortHashJoin() {}
 
