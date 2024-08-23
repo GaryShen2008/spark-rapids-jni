@@ -10,6 +10,7 @@
 #include <memory>
 
 #include "sort_hash_join.cuh"
+#include "partitioned_hash_join.cuh"
 
 using namespace cudf;
 using size_type = cudf::size_type;
@@ -33,7 +34,8 @@ inner_join(table_view const& left_input,
     cudaMemcpyAsync(left_vector->data(), host_values.data(), host_values.size() * sizeof(size_type), cudaMemcpyHostToDevice, stream.value());
     cudaMemcpyAsync(right_vector->data(), host_values.data(), host_values.size() * sizeof(size_type), cudaMemcpyHostToDevice, stream.value());
     // Return a pair of unique_ptrs to the vectors
-    SortHashJoin shj(left_input, right_input, 15, 0, 5);
+    //SortHashJoin shj(left_input, right_input, 15, 0, 5);
+    PartitionHashJoin phj(left_input, right_input, 6, 9, 0, 1000);
     // shj.test_column_factories();
     return {std::move(left_vector), std::move(right_vector)};
 
