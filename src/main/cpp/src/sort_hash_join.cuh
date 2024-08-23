@@ -12,6 +12,9 @@ public:
     , radix_bits(radix_bits)
     {
 
+        // nr and ns store the number of items in r and s
+        // first_bit, radix bits,
+
     }
 `                                                                   `   +
     ~SortHashJoin() {}
