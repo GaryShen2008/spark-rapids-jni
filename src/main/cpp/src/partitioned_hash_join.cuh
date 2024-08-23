@@ -42,8 +42,8 @@ public:
 
         allocate_mem(&r_key_partitions, true, buckets_num_max_R * bucket_size * sizeof(key_t));
         allocate_mem(&s_key_partitions, true, buckets_num_max_S * bucket_size * sizeof(key_t));
-        cudaMemcpy(r_key_partitions, COL(r,0), nr*sizeof(key_t), cudaMemcpyDefault);
-        cudaMemcpy(s_key_partitions, COL(s,0), ns*sizeof(key_t), cudaMemcpyDefault);
+        //cudaMemcpy(r_key_partitions, COL(r,0), nr*sizeof(key_t), cudaMemcpyDefault);
+        //cudaMemcpy(s_key_partitions, COL(s,0), ns*sizeof(key_t), cudaMemcpyDefault);
 //  #ifndef CHECK_CORRECTNESS
 //          release_mem(COL(r,0));
 //          release_mem(COL(s,0));
@@ -94,7 +94,7 @@ public:
 
     }
 
-    ~SortHashJoin() {}
+    ~PartitionHashJoin() {}
 
 private:
 
@@ -104,10 +104,14 @@ private:
 
     void partition_pairs() {}
 
+
+    static constexpr uint32_t log2_bucket_size = 12;
+    static constexpr uint32_t bucket_size = (1 << log2_bucket_size);
+
     const cudf::table_view r;
     const cudf::table_view s;
 
- int nr;
+    int nr;
     int ns;
     int n_matches;
     int circular_buffer_size;
