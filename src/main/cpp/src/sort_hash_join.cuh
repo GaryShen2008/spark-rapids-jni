@@ -2,16 +2,15 @@
 
 #include <cudf/table/table_view.hpp>
 #include <cudf/column/column.hpp>
-#include <cudf/column/column_view.hpp>
-#include <cudf/types.hpp>
-#include <rmm/device_buffer.hpp>
-#include <rmm/device_uvector.hpp>
-#include <iostream>
-
 #include <cudf/column/column_factories.hpp>
-
-#include <thrust/iterator/counting_iterator.h>
-#include <thrust/transform.h>
+#include <cudf/scalar/scalar.hpp>
+#include <cudf/types.hpp>
+#include <cudf/strings/strings_column_view.hpp>
+#include <cudf/dictionary/dictionary_column_view.hpp>
+#include <rmm/device_buffer.hpp>
+#include <rmm/device_vector.hpp>
+#include <thrust/device_vector.h>
+#include <iostream>
 
 class SortHashJoin {
 
@@ -23,7 +22,7 @@ public:
     , circular_buffer_size(circular_buffer_size)
     , radix_bits(radix_bits)
     {
-        test_mem();
+        void test_column_factories();
         // first_bit, radix bits, int circular_buffer_size: Parameters for partitioning and buffer size.
         // nr and ns store the number of items in r and s
         // n_partitions calculated the number of partitions based on radix_bits.
@@ -39,46 +38,45 @@ public:
         // Create CUDA Events for measuring execution time.
     }
 
-    // Function to print the column data
-    void print_column(const cudf::column_view& col) {
-        // Transfer data from device to host
-        std::vector<int> host_data(col.size());
-        cudaMemcpy(host_data.data(), col.data<int>(), col.size() * sizeof(int), cudaMemcpyDeviceToHost);
 
-        // Print data
-        for (int i = 0; i < col.size(); ++i) {
-            std::cout << host_data[i] << " ";
-        }
-        std::cout << std::endl;
+    void test_column_factories() {
+        // Test make_empty_column
+        auto empty_col = cudf::make_empty_column(cudf::data_type{cudf::type_id::INT32});
+        std::cout << "Empty column size: " << empty_col->size() << std::endl;
+
+        // Test make_numeric_column
+        auto numeric_col = cudf::make_numeric_column(cudf::data_type{cudf::type_id::FLOAT64}, 1000);
+        std::cout << "Numeric column size: " << numeric_col->size() << std::endl;
+
+        // Test make_strings_column
+        thrust::device_vector<const char*> d_strings = {"hello", "world", "cudf"};
+        thrust::device_vector<size_t> d_string_lengths = {5, 5, 4};
+        auto string_col = cudf::make_strings_column(
+            cudf::device_span<thrust::pair<const char*, size_t> const>(
+                thrust::make_zip_iterator(d_strings.begin(), d_string_lengths.begin()),
+                thrust::make_zip_iterator(d_strings.end(), d_string_lengths.end())
+            )
+        );
+        cudf::strings_column_view scv(string_col->view());
+        std::cout << "Strings column size: " << scv.size() << std::endl;
+
+        // Test make_column_from_scalar
+        cudf::numeric_scalar<int32_t> scalar(42);
+        auto scalar_col = cudf::make_column_from_scalar(scalar, 100);
+        std::cout << "Scalar column size: " << scalar_col->size() << std::endl;
+
+        // Test make_dictionary_column
+        auto keys = cudf::make_strings_column({"a", "b", "c", "d"});
+        rmm::device_vector<int32_t> indices{1, 0, 2, 3, 1, 2};
+        auto indices_col = cudf::make_numeric_column(cudf::data_type{cudf::type_id::INT32}, indices.size());
+        cudaMemcpy(indices_col->mutable_view().data<int32_t>(), indices.data().get(),
+                   indices.size() * sizeof(int32_t), cudaMemcpyDeviceToDevice);
+
+        auto dict_col = cudf::make_dictionary_column(std::move(keys), std::move(indices_col));
+        cudf::dictionary_column_view dcv(dict_col->view());
+        std::cout << "Dictionary column size: " << dcv.size() << std::endl;
+        std::cout << "Dictionary keys size: " << dcv.keys().size() << std::endl;
     }
-
-    void test_mem(){
-
-            // Number of partitions
-            int n_partitions = 10;
-
-            // Create a numeric column of INT32 with n_partitions elements
-            auto r_offsets = cudf::make_numeric_column(cudf::data_type{cudf::type_id::INT32}, n_partitions);
-
-            // Fill the column with some data
-            {
-                // Get a mutable view of the column
-                auto r_offsets_view = r_offsets->mutable_view();
-
-                // Create a device vector to hold data
-                rmm::device_uvector<int> d_data(n_partitions, rmm::cuda_stream_default);
-
-                // Fill the device vector with incremental values
-                thrust::sequence(thrust::device, d_data.begin(), d_data.end(), 0);
-
-                // Copy data from device vector to column
-                cudaMemcpy(r_offsets_view.data<int>(), d_data.data(), n_partitions * sizeof(int), cudaMemcpyDeviceToDevice);
-            }
-
-            // Print the column
-            print_column(r_offsets->view());
-    }
-
 
     ~SortHashJoin() {}
 
