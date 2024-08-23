@@ -35,6 +35,7 @@ inner_join(table_view const& left_input,
     std::cout << "hello from .cu" << std::endl;
     // Return a pair of unique_ptrs to the vectors
     SortHashJoin shj(left_input, right_input, 15, 0, 5);
+    shj.test_column_factories();
     return {std::move(left_vector), std::move(right_vector)};
 
 }
