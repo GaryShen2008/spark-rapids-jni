@@ -32,7 +32,7 @@ inner_join(table_view const& left_input,
     std::vector<size_type> host_values = {0, 1, 2, 3, 4};
     cudaMemcpyAsync(left_vector->data(), host_values.data(), host_values.size() * sizeof(size_type), cudaMemcpyHostToDevice, stream.value());
     cudaMemcpyAsync(right_vector->data(), host_values.data(), host_values.size() * sizeof(size_type), cudaMemcpyHostToDevice, stream.value());
-
+    std::cout << "hello from .cu" << std::endl;
     // Return a pair of unique_ptrs to the vectors
     SortHashJoin shj(left_input, right_input, 15, 0, 5);
     return {std::move(left_vector), std::move(right_vector)};
