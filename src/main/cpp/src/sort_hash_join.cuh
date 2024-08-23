@@ -11,12 +11,21 @@ public:
     , circular_buffer_size(circular_buffer_size)
     , radix_bits(radix_bits)
     {
-
+        // first_bit, radix bits, int circular_buffer_size: Parameters for partitioning and buffer size.
         // nr and ns store the number of items in r and s
-        // first_bit, radix bits,
+        // n_partitions calculated the number of partitions based on radix_bits.
 
+        // Use t
+        // Allocate Output Buffer:
+        // Allocate Memory for Intermediate Data Structures:
+        // Partition offsets(r_offsets, s_offsets)
+        // Work arrays (r_work, s_work)
+        // Key and value partitions (rkeys_partitions, skeys_partitions, rvals_partitions, svals_partitions).
+        // Total work counter (total_work).
+        // Match indices (r_match_idx, s_match_idx) if late materialization is used.
+        // Create CUDA Events for measuring execution time.
     }
-`                                                                   `   +
+
     ~SortHashJoin() {}
 
 private:
@@ -32,4 +41,7 @@ private:
     int first_bit;
     int n_partitions;
     int radix_bits;
+
+    int* r_match_idx {};
+    int* s_match_idx {};
 };
