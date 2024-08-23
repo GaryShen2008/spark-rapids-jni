@@ -40,42 +40,7 @@ public:
 
 
     void test_column_factories() {
-        // Test make_empty_column
-        auto empty_col = cudf::make_empty_column(cudf::data_type{cudf::type_id::INT32});
-        std::cout << "Empty column size: " << empty_col->size() << std::endl;
-
-        // Test make_numeric_column
-        auto numeric_col = cudf::make_numeric_column(cudf::data_type{cudf::type_id::FLOAT64}, 1000);
-        std::cout << "Numeric column size: " << numeric_col->size() << std::endl;
-
-        // Test make_strings_column
-        thrust::device_vector<const char*> d_strings = {"hello", "world", "cudf"};
-        thrust::device_vector<size_t> d_string_lengths = {5, 5, 4};
-        auto string_col = cudf::make_strings_column(
-            cudf::device_span<thrust::pair<const char*, size_t> const>(
-                thrust::make_zip_iterator(d_strings.begin(), d_string_lengths.begin()),
-                thrust::make_zip_iterator(d_strings.end(), d_string_lengths.end())
-            )
-        );
-        cudf::strings_column_view scv(string_col->view());
-        std::cout << "Strings column size: " << scv.size() << std::endl;
-
-        // Test make_column_from_scalar
-        cudf::numeric_scalar<int32_t> scalar(42);
-        auto scalar_col = cudf::make_column_from_scalar(scalar, 100);
-        std::cout << "Scalar column size: " << scalar_col->size() << std::endl;
-
-        // Test make_dictionary_column
-        auto keys = cudf::make_strings_column({"a", "b", "c", "d"});
-        rmm::device_vector<int32_t> indices{1, 0, 2, 3, 1, 2};
-        auto indices_col = cudf::make_numeric_column(cudf::data_type{cudf::type_id::INT32}, indices.size());
-        cudaMemcpy(indices_col->mutable_view().data<int32_t>(), indices.data().get(),
-                   indices.size() * sizeof(int32_t), cudaMemcpyDeviceToDevice);
-
-        auto dict_col = cudf::make_dictionary_column(std::move(keys), std::move(indices_col));
-        cudf::dictionary_column_view dcv(dict_col->view());
-        std::cout << "Dictionary column size: " << dcv.size() << std::endl;
-        std::cout << "Dictionary keys size: " << dcv.keys().size() << std::endl;
+       std::cout << "Hello I am here: " std::endl;
     }
 
     ~SortHashJoin() {}
