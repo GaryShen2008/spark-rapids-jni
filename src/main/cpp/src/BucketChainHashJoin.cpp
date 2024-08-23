@@ -38,9 +38,6 @@ jlongArray gather_maps_to_java(
     std::pair<std::unique_ptr<rmm::device_uvector<cudf::size_type>>,
             std::unique_ptr<rmm::device_uvector<cudf::size_type>>> maps)
 {
-    std::cout<< "First Size:" <<  sizeof(maps.first) <<std::endl;
-    std::cout<< "First Size:" <<  sizeof(maps.second) <<std::endl;
-
   // release the underlying device buffer to Java
   auto left_map_buffer  = std::make_unique<rmm::device_buffer>(maps.first->release());
   auto right_map_buffer = std::make_unique<rmm::device_buffer>(maps.second->release());
