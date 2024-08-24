@@ -59,9 +59,6 @@ public:
                case cudf::type_id::FLOAT64:
                     data_ptr = const_cast<void*>(static_cast<const void*>(first_column.data<double>()));
                     break;
-               case cudf::type_id::STRING:
-                    data_ptr = const_cast<void*>(static_cast<const void*>(first_column.data<cudf::string_view>()));
-                    break;
                // ... handle other types as needed
                default:
                     // Handle unexpected types
