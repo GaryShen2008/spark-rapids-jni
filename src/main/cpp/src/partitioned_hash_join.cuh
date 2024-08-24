@@ -66,6 +66,13 @@ public:
             std::cout << "memory allocated cudaSuccess!" << std::endl;
         }
 
+        cudf::column_view second_column = s_in.column(0);
+
+        cudf::data_type dtype = second_column.type();
+
+        void* data_ptr_s = const_cast<void*>(static_cast<const void*>(second_column.data<int32_t>()));
+        cudaMemcpy(s_key_partitions, data_ptr_s, nr*sizeof(int32_t), cudaMemcpyDefault);
+
         //cudaMemcpy(s_key_partitions, COL(s,0), ns*sizeof(key_t), cudaMemcpyDefault);
 //  #ifndef CHECK_CORRECTNESS
 //          release_mem(COL(r,0));
