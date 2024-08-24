@@ -12,6 +12,8 @@
 #include <thrust/device_vector.h>
 #include "utils.cuh"
 
+#include "phj_util.cuh"
+
 #include <cudf/column/column_view.hpp>
 
 #include <iostream>
