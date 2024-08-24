@@ -46,7 +46,7 @@ public:
         allocate_mem(&s_key_partitions, true, buckets_num_max_S * bucket_size * sizeof(key_t));
 
         // Get the column_view for the first column (index 0)
-        cudf::column_view first_column = table[0];
+        cudf::column_view first_column = r_in[0];
 
         cudf::data_type dtype = first_column.type();
         cudf::type_id type_id = dtype.id();
