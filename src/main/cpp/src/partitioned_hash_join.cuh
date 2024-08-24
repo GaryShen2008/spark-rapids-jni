@@ -51,21 +51,9 @@ public:
         cudf::data_type dtype = first_column.type();
         cudf::type_id type_id = dtype.id();
         void* data_ptr = nullptr;
+        data_ptr = const_cast<void*>(static_cast<const void*>(first_column.data<int32_t>()));
 
-        switch(type_id) {
-               case cudf::type_id::INT32:
-                    data_ptr = const_cast<void*>(static_cast<const void*>(first_column.data<int32_t>()));
-                    break;
-               case cudf::type_id::FLOAT64:
-                    data_ptr = const_cast<void*>(static_cast<const void*>(first_column.data<double>()));
-                    break;
-               // ... handle other types as needed
-               default:
-                    // Handle unexpected types
-                    throw std::runtime_error("Unsupported data type");
-
-        }
-        //cudaMemcpy(r_key_partitions, COL(r,0), nr*sizeof(key_t), cudaMemcpyDefault);
+        cudaMemcpy(r_key_partitions, data_ptr, nr*sizeof(int32_t), cudaMemcpyDefault);
         //cudaMemcpy(s_key_partitions, COL(s,0), ns*sizeof(key_t), cudaMemcpyDefault);
 //  #ifndef CHECK_CORRECTNESS
 //          release_mem(COL(r,0));
