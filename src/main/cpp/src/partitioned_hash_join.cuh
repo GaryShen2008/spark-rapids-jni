@@ -61,7 +61,7 @@ public:
                default:
                     // Handle unexpected types
                     throw std::runtime_error("Unsupported data type");
-               }
+
         }
         //cudaMemcpy(r_key_partitions, COL(r,0), nr*sizeof(key_t), cudaMemcpyDefault);
         //cudaMemcpy(s_key_partitions, COL(s,0), ns*sizeof(key_t), cudaMemcpyDefault);
