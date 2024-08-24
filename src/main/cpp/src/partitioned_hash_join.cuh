@@ -60,6 +60,8 @@ public:
             fprintf(stderr, "cudaMemcpy failed: %s\n", cudaGetErrorString(cudaStatus));
             // Handle the error appropriately, e.g., throw an exception or return an error code
             throw std::runtime_error("cudaMemcpy failed");
+        }else{
+            std::cout << "memory allocated cudaSuccess!" << std::endl;
         }
 
         //cudaMemcpy(s_key_partitions, COL(s,0), ns*sizeof(key_t), cudaMemcpyDefault);
