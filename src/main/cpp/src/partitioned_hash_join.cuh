@@ -51,7 +51,7 @@ public:
         cudf::column_view first_column = r_in.column(0);
 
         cudf::data_type dtype = first_column.type();
-        cudf::type_id type_id = dtype.id();
+        //cudf::type_id type_id = dtype.id();
         void* data_ptr = nullptr;
         data_ptr = const_cast<void*>(static_cast<const void*>(first_column.data<int32_t>()));
 
@@ -68,7 +68,7 @@ public:
 
         cudf::column_view second_column = s_in.column(0);
 
-        cudf::data_type dtype = second_column.type();
+        //cudf::data_type dtype = second_column.type();
 
         void* data_ptr_s = const_cast<void*>(static_cast<const void*>(second_column.data<int32_t>()));
         cudaMemcpy(s_key_partitions, data_ptr_s, nr*sizeof(int32_t), cudaMemcpyDefault);
