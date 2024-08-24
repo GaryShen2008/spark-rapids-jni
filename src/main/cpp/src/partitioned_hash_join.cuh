@@ -53,7 +53,15 @@ public:
         void* data_ptr = nullptr;
         data_ptr = const_cast<void*>(static_cast<const void*>(first_column.data<int32_t>()));
 
-        cudaMemcpy(r_key_partitions, data_ptr, nr*sizeof(int32_t), cudaMemcpyDefault);
+        // Perform cudaMemcpy and check for errors
+        cudaError_t cudaStatus = cudaMemcpy(r_key_partitions, data_ptr, nr*sizeof(int32_t), cudaMemcpyDefault);
+
+        if (cudaStatus != cudaSuccess) {
+            fprintf(stderr, "cudaMemcpy failed: %s\n", cudaGetErrorString(cudaStatus));
+            // Handle the error appropriately, e.g., throw an exception or return an error code
+            throw std::runtime_error("cudaMemcpy failed");
+        }
+
         //cudaMemcpy(s_key_partitions, COL(s,0), ns*sizeof(key_t), cudaMemcpyDefault);
 //  #ifndef CHECK_CORRECTNESS
 //          release_mem(COL(r,0));
