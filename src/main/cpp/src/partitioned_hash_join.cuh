@@ -121,8 +121,9 @@ public:
     }
 
     void join(){
-         partition();
-         hash_join();
+        std::cout << "in join" << std::endl;
+        partition();
+        hash_join();
     }
 
     ~PartitionHashJoin() {}
