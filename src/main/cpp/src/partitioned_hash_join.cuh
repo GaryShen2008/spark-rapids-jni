@@ -42,6 +42,27 @@ public:
 
         allocate_mem(&r_key_partitions, true, buckets_num_max_R * bucket_size * sizeof(key_t));
         allocate_mem(&s_key_partitions, true, buckets_num_max_S * bucket_size * sizeof(key_t));
+
+        cudf::data_type dtype = column_view.type();
+        cudf::type_id type_id = dtype.id();
+        void* data_ptr = nullptr;
+
+        switch(type_id) {
+               case cudf::type_id::INT32:
+                    data_ptr = const_cast<void*>(static_cast<const void*>(column_view.data<int32_t>()));
+                    break;
+               case cudf::type_id::FLOAT64:
+                    data_ptr = const_cast<void*>(static_cast<const void*>(column_view.data<double>()));
+                    break;
+               case cudf::type_id::STRING:
+                    data_ptr = const_cast<void*>(static_cast<const void*>(column_view.data<cudf::string_view>()));
+                    break;
+               // ... handle other types as needed
+               default:
+                    // Handle unexpected types
+                    throw std::runtime_error("Unsupported data type");
+               }
+        }
         //cudaMemcpy(r_key_partitions, COL(r,0), nr*sizeof(key_t), cudaMemcpyDefault);
         //cudaMemcpy(s_key_partitions, COL(s,0), ns*sizeof(key_t), cudaMemcpyDefault);
 //  #ifndef CHECK_CORRECTNESS
