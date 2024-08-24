@@ -46,7 +46,7 @@ public:
         allocate_mem(&s_key_partitions, true, buckets_num_max_S * bucket_size * sizeof(key_t));
 
         // Get the column_view for the first column (index 0)
-        cudf::column_view first_column = r_in[0];
+        cudf::column_view first_column = r_in.column(0);
 
         cudf::data_type dtype = first_column.type();
         cudf::type_id type_id = dtype.id();
@@ -54,13 +54,13 @@ public:
 
         switch(type_id) {
                case cudf::type_id::INT32:
-                    data_ptr = const_cast<void*>(static_cast<const void*>(column_view.data<int32_t>()));
+                    data_ptr = const_cast<void*>(static_cast<const void*>(first_column.data<int32_t>()));
                     break;
                case cudf::type_id::FLOAT64:
-                    data_ptr = const_cast<void*>(static_cast<const void*>(column_view.data<double>()));
+                    data_ptr = const_cast<void*>(static_cast<const void*>(first_column.data<double>()));
                     break;
                case cudf::type_id::STRING:
-                    data_ptr = const_cast<void*>(static_cast<const void*>(column_view.data<cudf::string_view>()));
+                    data_ptr = const_cast<void*>(static_cast<const void*>(first_column.data<cudf::string_view>()));
                     break;
                // ... handle other types as needed
                default:
