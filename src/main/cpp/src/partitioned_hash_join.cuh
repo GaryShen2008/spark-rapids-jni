@@ -126,6 +126,21 @@ public:
         hash_join();
     }
 
+
+    void print_match_indices() {
+        std::cout << "r_match_idx: ";
+        for (int i = 0; i < n_matches; ++i) {
+            std::cout << r_match_idx[i] << " ";
+        }
+        std::cout << std::endl;
+
+        std::cout << "s_match_idx: ";
+        for (int i = 0; i < n_matches; ++i) {
+                std::cout << s_match_idx[i] << " ";
+        }
+        std::cout << std::endl;
+    }
+
     ~PartitionHashJoin() {}
 public:
     float partition_time {0};
@@ -243,19 +258,7 @@ private:
 
     }
 
-    void print_match_indices() {
-        std::cout << "r_match_idx: ";
-        for (int i = 0; i < n_matches; ++i) {
-            std::cout << r_match_idx[i] << " ";
-        }
-        std::cout << std::endl;
 
-        std::cout << "s_match_idx: ";
-        for (int i = 0; i < n_matches; ++i) {
-            std::cout << s_match_idx[i] << " ";
-        }
-        std::cout << std::endl;
-    }
 
     void swap_r_s() {
         // Swap the key partitions of R and S.
