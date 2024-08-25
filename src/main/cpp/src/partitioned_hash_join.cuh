@@ -128,6 +128,7 @@ public:
 
 
     void print_match_indices() {
+        std::cout << "n_matches: " << n_matches << std::endl;
         std::cout << "r_match_idx: ";
         for (int i = 0; i < n_matches; ++i) {
             std::cout << r_match_idx[i] << " ";
