@@ -243,7 +243,7 @@ private:
 
     }
 
-    void print_match_indices(int* r_match_idx, int* s_match_idx, int n_matches) {
+    void print_match_indices() {
         std::cout << "r_match_idx: ";
         for (int i = 0; i < n_matches; ++i) {
             std::cout << r_match_idx[i] << " ";
