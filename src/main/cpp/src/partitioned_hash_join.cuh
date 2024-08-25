@@ -218,6 +218,11 @@ private:
         constexpr int NT = 512;
         constexpr int VT = 4;
 
+        // shuffle region + histogram region + extra meta info
+        const size_t p1_sm_bytes = (NT*VT) * max(sizeof(KeyT), sizeof(val_t)) + (4*(1 << log_parts1)) * sizeof(int32_t);
+        const size_t p2_sm_bytes = (NT*VT) * max(sizeof(KeyT), sizeof(val_t)) + (4*(1 << log_parts2)) * sizeof(int32_t);
+
+
         size_t sm_bytes = (bucket_size + 512) * (sizeof(key_t) + sizeof(int) + sizeof(int16_t)) + // elem, payload and next resp.
                                     (1 << LOCAL_BUCKETS_BITS) * sizeof(int32_t) + // hash table head
                                     + SHUFFLE_SIZE * (NT/32) * (sizeof(key_t) + sizeof(int)*2);
@@ -281,6 +286,9 @@ private:
 
     static constexpr uint32_t log2_bucket_size = 12;
     static constexpr uint32_t bucket_size = (1 << log2_bucket_size);
+    static constexpr int LOCAL_BUCKETS_BITS = 11;
+    static constexpr int SHUFFLE_SIZE = 32;
+
 
     const cudf::table_view r;
     const cudf::table_view s;
