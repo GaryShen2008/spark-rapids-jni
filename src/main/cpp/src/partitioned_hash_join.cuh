@@ -162,7 +162,7 @@ private:
         const size_t p1_sm_bytes = (NT*VT) * max(sizeof(KeyT), sizeof(val_t)) + (4*(1 << log_parts1)) * sizeof(int32_t);
         const size_t p2_sm_bytes = (NT*VT) * max(sizeof(KeyT), sizeof(val_t)) + (4*(1 << log_parts2)) * sizeof(int32_t);
 
-        const int sm_counts = 70; // need to change later.
+        const int sm_counts = 80; // need to change later.
 
       // Initialize Metadata:
         // init_metadata_double: A CUDA kernel that initializes metadata for buckets, such as heads, chains, and counts.
