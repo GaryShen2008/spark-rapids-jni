@@ -218,7 +218,38 @@ private:
         constexpr int NT = 512;
         constexpr int VT = 4;
 
+        size_t sm_bytes = (bucket_size + 512) * (sizeof(key_t) + sizeof(int) + sizeof(int16_t)) + // elem, payload and next resp.
+                                    (1 << LOCAL_BUCKETS_BITS) * sizeof(int32_t) + // hash table head
+                                    + SHUFFLE_SIZE * (NT/32) * (sizeof(key_t) + sizeof(int)*2);
+        std::cout << "sm_bytes: " << sm_bytes << std::endl;
+                    // join_fn: An alias for the kernel join_copartitions, configured with specific template parameters like thread count (NT),
+                    // vector length (VT), and data types.
+         auto join_fn = join_copartitions<NT, VT, LOCAL_BUCKETS_BITS, SHUFFLE_SIZE, key_t, int>;
+                    // cudaFuncSetAttribute: Sets the maximum dynamic shared memory size for join_fn to sm_bytes.
+        cudaFuncSetAttribute(join_fn, cudaFuncAttributeMaxDynamicSharedMemorySize, sm_bytes);
+        join_fn<<<(1 << (log_parts1+log_parts2)), NT, sm_bytes>>>
+                    (r_key_partitions, (int*)(r_val_partitions),
+                     chains_R[1], bucket_info_R,
+                     s_key_partitions, (int*)(s_val_partitions),
+                     cnts_S[1], chains_S[1], log_parts1 + log_parts2, buckets_used_R[1],
+                      bucket_size,
+                      d_n_matches,
+                      nullptr, r_match_idx, s_match_idx, circular_buffer_size);
 
+    }
+
+    void print_match_indices(int* r_match_idx, int* s_match_idx, int n_matches) {
+        std::cout << "r_match_idx: ";
+        for (int i = 0; i < n_matches; ++i) {
+            std::cout << r_match_idx[i] << " ";
+        }
+        std::cout << std::endl;
+
+        std::cout << "s_match_idx: ";
+        for (int i = 0; i < n_matches; ++i) {
+            std::cout << s_match_idx[i] << " ";
+        }
+        std::cout << std::endl;
     }
 
     void swap_r_s() {
@@ -247,16 +278,6 @@ private:
         structures to achieve this.
         */
     }
-
-
-
-    // no need to do this because it is done in cudf.
-    void materialize_by_gather(){
-
-    }
-
-    void partition_pairs() {}
-
 
     static constexpr uint32_t log2_bucket_size = 12;
     static constexpr uint32_t bucket_size = (1 << log2_bucket_size);

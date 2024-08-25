@@ -722,7 +722,7 @@ __global__ void join_copartitions (
                                     if(lid < SHUFFLE_SIZE) {
                                         r_output[w_pos] = warp_shuffle->val_R_elem[lid];
                                         s_output[w_pos] = warp_shuffle->val_S_elem[lid];
-                                        keys_out[w_pos] = warp_shuffle->key_elem[lid];
+                                        //keys_out[w_pos] = warp_shuffle->key_elem[lid];
                                     }
 
                                     wr_offset -= SHUFFLE_SIZE;
@@ -855,7 +855,7 @@ __global__ void join_copartitions (
                                 if(lid < SHUFFLE_SIZE) {
                                     r_output[w_pos] = warp_shuffle->val_R_elem[lid];
                                     s_output[w_pos] = warp_shuffle->val_S_elem[lid];
-                                    keys_out[w_pos] = warp_shuffle->key_elem[lid];
+                                    //keys_out[w_pos] = warp_shuffle->key_elem[lid];
                                 }
 
                                 wr_offset -= SHUFFLE_SIZE;
@@ -895,7 +895,7 @@ __global__ void join_copartitions (
         if(lid < SHUFFLE_SIZE) {
             r_output[w_pos] = warp_shuffle->val_R_elem[lid];
             s_output[w_pos] = warp_shuffle->val_S_elem[lid];
-            keys_out[w_pos] = warp_shuffle->key_elem[lid];
+            //keys_out[w_pos] = warp_shuffle->key_elem[lid];
         }
     }
 }
