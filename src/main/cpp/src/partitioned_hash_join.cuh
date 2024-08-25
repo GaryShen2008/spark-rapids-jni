@@ -219,8 +219,8 @@ private:
         constexpr int VT = 4;
 
         // shuffle region + histogram region + extra meta info
-        const size_t p1_sm_bytes = (NT*VT) * max(sizeof(KeyT), sizeof(val_t)) + (4*(1 << log_parts1)) * sizeof(int32_t);
-        const size_t p2_sm_bytes = (NT*VT) * max(sizeof(KeyT), sizeof(val_t)) + (4*(1 << log_parts2)) * sizeof(int32_t);
+        const size_t p1_sm_bytes = (NT*VT) * max(sizeof(int32_t), sizeof(int32_t)) + (4*(1 << log_parts1)) * sizeof(int32_t);
+        const size_t p2_sm_bytes = (NT*VT) * max(sizeof(int32_t), sizeof(int32_t)) + (4*(1 << log_parts2)) * sizeof(int32_t);
 
 
         size_t sm_bytes = (bucket_size + 512) * (sizeof(key_t) + sizeof(int) + sizeof(int16_t)) + // elem, payload and next resp.
