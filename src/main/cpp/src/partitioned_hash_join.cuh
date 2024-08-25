@@ -128,7 +128,6 @@ public:
 
 
     void print_match_indices() {
-        int n_matches = min(*d_n_matches, circular_buffer_size);
         std::cout << "n_matches: " << n_matches << std::endl;
         std::cout << "r_match_idx: ";
         for (int i = 0; i < n_matches; ++i) {
@@ -257,6 +256,9 @@ private:
                       bucket_size,
                       d_n_matches,
                       nullptr, r_match_idx, s_match_idx, circular_buffer_size);
+
+        // This line of code transfers data from the GPU to the host (CPU).
+        cudaMemcpy(&n_matches, d_n_matches, sizeof(n_matches), cudaMemcpyDeviceToHost);
 
     }
 
