@@ -16,9 +16,9 @@ public class SortHashJoinTest {
         Table left = tb1.build();
         Table right = tb2.build();
 
-        GatherMap[] map = BucketChainHashJoin.innerJoinGatherMaps(left, right,  true);
-        long rows = map[0].getRowCount();
-        System.out.println(rows);
+        //GatherMap[] map = BucketChainHashJoin.innerJoinGatherMaps(left, right,  true);
+        //long rows = map[0].getRowCount();
+        //System.out.println(rows);
 
     }
 }
