@@ -32,6 +32,7 @@ public:
     , first_bit(first_bit)
     , circular_buffer_size(circular_buffer_size)
     {
+        std::cout << " I am in phj.\n";
         nr = static_cast<int>(r.num_rows());
         ns = static_cast<int>(s.num_rows());
 
@@ -52,8 +53,10 @@ public:
         allocate_mem(&r_key_partitions, true, buckets_num_max_R * bucket_size * sizeof(key_t));
         allocate_mem(&s_key_partitions, true, buckets_num_max_S * bucket_size * sizeof(key_t));
 
+        std::cout << "first_column initialized before\n";
         // Get the column_view for the first column (index 0) because we only support single key join now.
         cudf::column_view first_column = r_in.column(0);
+        std::cout << "first_column initialized after\n";
         // Get the type of the first column.
         cudf::data_type dtype_r = first_column.type();
         const void* data_ptr_r;
