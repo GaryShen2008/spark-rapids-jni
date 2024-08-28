@@ -25,22 +25,15 @@ inner_join(table_view const& left_input,
            null_equality compare_nulls,
            rmm::cuda_stream_view stream,
            rmm::device_async_resource_ref mr){
-    // Allocate device_uvector with 5 elements
-    auto left_vector = std::make_unique<rmm::device_uvector<size_type>>(5, stream, mr);
-    auto right_vector = std::make_unique<rmm::device_uvector<size_type>>(5, stream, mr);
 
-    // Example: Fill vectors with dummy values (e.g., 0, 1, 2, 3, 4)
-    std::vector<size_type> host_values = {0, 1, 2, 3, 4};
-    cudaMemcpyAsync(left_vector->data(), host_values.data(), host_values.size() * sizeof(size_type), cudaMemcpyHostToDevice, stream.value());
-    cudaMemcpyAsync(right_vector->data(), host_values.data(), host_values.size() * sizeof(size_type), cudaMemcpyHostToDevice, stream.value());
+    int num_r = left_input.num_rows();
+    int num_s = right_input.num_rows();
+    int circular_buffer_size = std::max(num_r, num_s);
     // Return a pair of unique_ptrs to the vectors
-    //SortHashJoin shj(left_input, right_input, 15, 0, 5);
-    PartitionHashJoin phj(left_input, right_input, 6, 9, 0, 1000);
-    phj.join();
+    PartitionHashJoin phj(left_input, right_input, 6, 9, 0, circular_buffer_size);
+    auto result = phj.join(stream, mr);
     phj.print_match_indices();
-    // shj.test_column_factories();
-    return {std::move(left_vector), std::move(right_vector)};
-
+    return result;
 }
 
 } // detail

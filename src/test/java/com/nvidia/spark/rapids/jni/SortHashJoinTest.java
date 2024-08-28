@@ -6,12 +6,12 @@ import org.junit.jupiter.api.Test;
 
 public class SortHashJoinTest {
     @Test
-    void testSortHashJoin() {
+    void  testSortHashJoin() {
         Table.TestBuilder tb1 = new Table.TestBuilder();
         tb1.column(1, 2, 3, 4);
 
         Table.TestBuilder tb2 = new Table.TestBuilder();
-        tb2.column(1, 2, 3, 4);
+        tb2.column(1, 2, 3, 6, 8, 3, 3, 3, 2);
 
         Table left = tb1.build();
         Table right = tb2.build();

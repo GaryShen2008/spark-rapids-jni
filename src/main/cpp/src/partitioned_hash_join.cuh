@@ -35,6 +35,11 @@ public:
         nr = static_cast<int>(r.num_rows());
         ns = static_cast<int>(s.num_rows());
 
+        if (r.num_columns() != 1 || s.num_columns() != 1)
+        {
+            throw std::runtime_error("Only support single key now");
+        }
+
         parts1 = 1 << log_parts1;
         parts2 = 1 << (log_parts1 + log_parts2);
 
@@ -47,41 +52,56 @@ public:
         allocate_mem(&r_key_partitions, true, buckets_num_max_R * bucket_size * sizeof(key_t));
         allocate_mem(&s_key_partitions, true, buckets_num_max_S * bucket_size * sizeof(key_t));
 
-        // Get the column_view for the first column (index 0)
+        // Get the column_view for the first column (index 0) because we only support single key join now.
         cudf::column_view first_column = r_in.column(0);
-
-        cudf::data_type dtype = first_column.type();
-        //cudf::type_id type_id = dtype.id();
-        void* data_ptr = nullptr;
-        data_ptr = const_cast<void*>(static_cast<const void*>(first_column.data<int32_t>()));
+        // Get the type of the first column.
+        cudf::data_type dtype_r = first_column.type();
+        const void* data_ptr_r;
+        if (dtype_r.id() == cudf::type_id::INT32) {
+            // The column type is INT32
+            data_ptr_r = static_cast<const void*>(first_column.data<int32_t>());
+            // Proceed with your INT32-specific logic here
+        } else {
+            // Handle other data types or throw an error if INT32 is required
+             throw std::runtime_error("R key type not supported");
+        }
 
         // Perform cudaMemcpy and check for errors
-        cudaError_t cudaStatus = cudaMemcpy(r_key_partitions, data_ptr, nr*sizeof(int32_t), cudaMemcpyDefault);
-
+        cudaError_t cudaStatus;
+        cudaStatus = cudaMemcpy(r_key_partitions, data_ptr_r, nr*sizeof(int32_t), cudaMemcpyDefault);
         if (cudaStatus != cudaSuccess) {
-            fprintf(stderr, "cudaMemcpy failed: %s\n", cudaGetErrorString(cudaStatus));
+            fprintf(stderr, "R table cudaMemcpy failed: %s\n", cudaGetErrorString(cudaStatus));
             // Handle the error appropriately, e.g., throw an exception or return an error code
             throw std::runtime_error("cudaMemcpy failed");
         }else{
-            std::cout << "memory allocated cudaSuccess!" << std::endl;
+            std::cout << "R table memory allocated cudaSuccess!" << std::endl;
         }
 
         cudf::column_view second_column = s_in.column(0);
+        // Get the type of the first column.
+        cudf::data_type dtype_s = second_column.type();
+        const void* data_ptr_s;
+        if (dtype_s.id() == cudf::type_id::INT32) {
+            // The column type is INT32
+            data_ptr_s = static_cast<const void*>(second_column.data<int32_t>());
+            // Proceed with your INT32-specific logic here
+        } else {
+            // Handle other data types or throw an error if INT32 is required
+            throw std::runtime_error("S key type not supported");
+         }
 
-        //cudf::data_type dtype = second_column.type();
+        cudaStatus = cudaMemcpy(s_key_partitions, data_ptr_s, ns*sizeof(int32_t), cudaMemcpyDefault);
 
-        void* data_ptr_s = const_cast<void*>(static_cast<const void*>(second_column.data<int32_t>()));
-        cudaMemcpy(s_key_partitions, data_ptr_s, nr*sizeof(int32_t), cudaMemcpyDefault);
-
-        //cudaMemcpy(s_key_partitions, COL(s,0), ns*sizeof(key_t), cudaMemcpyDefault);
-//  #ifndef CHECK_CORRECTNESS
-//          release_mem(COL(r,0));
-//          release_mem(COL(s,0));
-//  #endif
+        if (cudaStatus != cudaSuccess) {
+            fprintf(stderr, "S table cudaMemcpy failed: %s\n", cudaGetErrorString(cudaStatus));
+            // Handle the error appropriately, e.g., throw an exception or return an error code
+            throw std::runtime_error("cudaMemcpy failed");
+        }else{
+            std::cout << "S table memory allocated cudaSuccess!" << std::endl;
+        }
 
         allocate_mem(&r_key_partitions_temp, true, buckets_num_max_R * bucket_size * sizeof(key_t));
         allocate_mem(&s_key_partitions_temp, true, buckets_num_max_S * bucket_size * sizeof(key_t));
-
 
         // late materialization
         allocate_mem(&r_val_partitions, true, buckets_num_max_R * bucket_size * sizeof(int32_t));
@@ -108,9 +128,9 @@ public:
         bucket_info_R = (uint32_t*)s_val_partitions_temp;
 
         allocate_mem(&d_n_matches);
-
    }
 
+    // Just for testing if I can use cudf to allocate memory.
     void test_column_factories() {
         std::cout << "Hello I am here: " << std::endl;
         auto empty_col = cudf::make_empty_column(cudf::data_type{cudf::type_id::INT32});
@@ -120,29 +140,75 @@ public:
         std::cout << "Numeric column size: " << numeric_col->size() << std::endl;
     }
 
-    void join(){
-        std::cout << "in join" << std::endl;
+    std::pair<std::unique_ptr<rmm::device_uvector<cudf::size_type>>,
+              std::unique_ptr<rmm::device_uvector<cudf::size_type>>> join(rmm::cuda_stream_view stream,
+                                                      rmm::device_async_resource_ref mr){
+        std::cout << "Performing join:" << std::endl;
         partition();
+        swap_r_s();
+        balance_buckets();
         hash_join();
-    }
+        swap_r_s();
 
+        auto r_match_uvector = std::make_unique<rmm::device_uvector<cudf::size_type>>(n_matches, stream, mr);
+        auto s_match_uvector = std::make_unique<rmm::device_uvector<cudf::size_type>>(n_matches, stream, mr);
+
+        // Copy data from device to device_uvectors
+        cudaError_t cudaStatus = cudaMemcpy(r_match_uvector->data(), r_match_idx,
+                                            n_matches * sizeof(int), cudaMemcpyDeviceToDevice);
+        if (cudaStatus != cudaSuccess) {
+            throw std::runtime_error("cudaMemcpy failed for r_match_idx");
+        }
+
+        cudaStatus = cudaMemcpy(s_match_uvector->data(), s_match_idx,
+                                n_matches * sizeof(int), cudaMemcpyDeviceToDevice);
+        if (cudaStatus != cudaSuccess) {
+            throw std::runtime_error("cudaMemcpy failed for s_match_idx");
+        }
+
+
+        host_r_match_idx = new int[n_matches];
+        host_s_match_idx = new int[n_matches];
+
+        cudaStatus = cudaMemcpy(host_r_match_idx, r_match_idx, n_matches * sizeof(int), cudaMemcpyDeviceToHost);
+
+        if (cudaStatus != cudaSuccess) {
+            fprintf(stderr, "cudaMemcpy failed: %s\n", cudaGetErrorString(cudaStatus));
+             // Handle the error appropriately, e.g., throw an exception or return an error code
+             throw std::runtime_error("cudaMemcpy failed");
+        }else{
+              std::cout << "memory allocated cudaSuccess!" << std::endl;
+        }
+        cudaStatus = cudaMemcpy(host_s_match_idx, s_match_idx, n_matches * sizeof(int), cudaMemcpyDeviceToHost);
+        if (cudaStatus != cudaSuccess) {
+            fprintf(stderr, "cudaMemcpy failed: %s\n", cudaGetErrorString(cudaStatus));
+            // Handle the error appropriately, e.g., throw an exception or return an error code
+            throw std::runtime_error("cudaMemcpy failed");
+        }else{
+            std::cout << "memory allocated cudaSuccess!" << std::endl;
+        }
+
+        // Return the pair of unique_ptrs to device_uvectors
+        return std::make_pair(std::move(r_match_uvector), std::move(s_match_uvector));
+    }
 
     void print_match_indices() {
         std::cout << "n_matches: " << n_matches << std::endl;
         std::cout << "r_match_idx: ";
         for (int i = 0; i < n_matches; ++i) {
-            std::cout << r_match_idx[i] << " ";
+            std::cout << host_r_match_idx[i] << " ";
         }
         std::cout << std::endl;
 
         std::cout << "s_match_idx: ";
         for (int i = 0; i < n_matches; ++i) {
-                std::cout << s_match_idx[i] << " ";
+                std::cout << host_s_match_idx[i] << " ";
         }
         std::cout << std::endl;
     }
 
     ~PartitionHashJoin() {}
+
 public:
     float partition_time {0};
     float join_time {0};
@@ -257,12 +323,9 @@ private:
                       d_n_matches,
                       nullptr, r_match_idx, s_match_idx, circular_buffer_size);
 
-        // This line of code transfers data from the GPU to the host (CPU).
+        //  transfers data from the GPU to the host (CPU).
         cudaMemcpy(&n_matches, d_n_matches, sizeof(n_matches), cudaMemcpyDeviceToHost);
-
     }
-
-
 
     void swap_r_s() {
         // Swap the key partitions of R and S.
@@ -295,7 +358,6 @@ private:
     static constexpr uint32_t bucket_size = (1 << log2_bucket_size);
     static constexpr int LOCAL_BUCKETS_BITS = 11;
     static constexpr int SHUFFLE_SIZE = 32;
-
 
     const cudf::table_view r;
     const cudf::table_view s;
@@ -340,6 +402,9 @@ private:
 
     int*   r_match_idx     {nullptr};
     int*   s_match_idx     {nullptr};
+
+    int*   host_r_match_idx {nullptr};
+    int*   host_s_match_idx {nullptr};
 
     int*   d_n_matches     {nullptr};
 };

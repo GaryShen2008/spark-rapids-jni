@@ -573,6 +573,25 @@ __global__ void join_copartitions (
                                     ValT*                        r_output,
                                     ValT*                        s_output,
                                     int32_t                      circular_buffer_size) {
+
+    /*
+    if (threadIdx.x == 0 && blockIdx.x == 0) {
+        printf("First few values of R:\n");
+        for (int i = 0; i < 4 && i < bucket_size; ++i) {
+             printf("R[%d] = %d\n", i, R[i]);
+             printf("Rv[%d] = %d\n", i, Pr[i]);
+        }
+    }
+
+
+    if (threadIdx.x == 0 && blockIdx.x == 0) {
+        printf("First few values of S:\n");
+        for (int i = 0; i < 4 && i < bucket_size; ++i) {
+             printf("S[%d] = %d\n", i, S[i]);
+             printf("Sv[%d] = %d\n", i, Ps[i]);
+        }
+    }
+    */
     constexpr int LOCAL_BUCKETS = (1 << LOCAL_BUCKETS_BITS);
 
     extern __shared__ int16_t temp[];
@@ -896,6 +915,23 @@ __global__ void join_copartitions (
             r_output[w_pos] = warp_shuffle->val_R_elem[lid];
             s_output[w_pos] = warp_shuffle->val_S_elem[lid];
             //keys_out[w_pos] = warp_shuffle->key_elem[lid];
+        }
+    }
+    // Print some values from R
+    if (threadIdx.x == 0 && blockIdx.x == 0) {
+        printf("First few values of R output:\n");
+        for (int i = 0; i < 4 ; ++i) {
+             printf("r_output[%d] = %d\n", i, r_output[i]);
+
+        }
+    }
+
+    // Print some values from R
+    if (threadIdx.x == 0 && blockIdx.x == 0) {
+        printf("First few values of S output:\n");
+        for (int i = 0; i < 4 ; ++i) {
+             printf("s_output[%d] = %d\n", i, s_output[i]);
+
         }
     }
 }
