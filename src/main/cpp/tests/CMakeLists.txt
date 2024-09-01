@@ -81,3 +81,6 @@ ConfigureTest(PARSE_URI
 ConfigureTest(SUBSTRING_INDEX
     substring_index.cpp)
 
+ConfigureTest(MEM_MANAGER
+    mem_manager.cpp)
+

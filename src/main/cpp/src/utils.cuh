@@ -90,7 +90,7 @@ inline size_t get_cuda_free_mem() {
 }
 
 // Choose your own memory pool size
-constexpr size_t mem_pool_size = 12844901888 * 0.5;
+constexpr size_t mem_pool_size = 12844901888 * 0.8;
 //  8525063172
 //  12844901888
 static UserSpaceMM<mem_pool_size>* mm;

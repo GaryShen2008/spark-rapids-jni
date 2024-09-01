@@ -32,7 +32,11 @@ inner_join(table_view const& left_input,
     // Return a pair of unique_ptrs to the vectors
     PartitionHashJoin phj(left_input, right_input, 6, 9, 0, circular_buffer_size);
     auto result = phj.join(stream, mr);
-    phj.print_match_indices();
+    std::cout << "partition_time " << phj.partition_time << std::endl;
+    std::cout << "join_time " << phj.join_time << std::endl;
+    std::cout << "copy_device_vector_time " << phj.copy_device_vector_time << std::endl;
+    std::cout << "in_copy_time " << phj.in_copy_time << std::endl;
+    //phj.print_match_indices();
     return result;
 }
 

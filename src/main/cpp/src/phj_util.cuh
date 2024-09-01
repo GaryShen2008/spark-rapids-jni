@@ -918,6 +918,7 @@ __global__ void join_copartitions (
         }
     }
     // Print some values from R
+    /*
     if (threadIdx.x == 0 && blockIdx.x == 0) {
         printf("First few values of R output:\n");
         for (int i = 0; i < 4 ; ++i) {
@@ -925,8 +926,6 @@ __global__ void join_copartitions (
 
         }
     }
-
-    // Print some values from R
     if (threadIdx.x == 0 && blockIdx.x == 0) {
         printf("First few values of S output:\n");
         for (int i = 0; i < 4 ; ++i) {
@@ -934,4 +933,5 @@ __global__ void join_copartitions (
 
         }
     }
+    */
 }
