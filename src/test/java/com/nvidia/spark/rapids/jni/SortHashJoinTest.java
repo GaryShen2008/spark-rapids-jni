@@ -2,10 +2,8 @@ package com.nvidia.spark.rapids.jni;
 
 import ai.rapids.cudf.*;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.shadow.com.univocity.parsers.csv.CsvWriter;
 
 import java.io.File;
-import java.io.IOException;
 
 public class SortHashJoinTest {
 
@@ -124,16 +122,16 @@ public class SortHashJoinTest {
         File file1 = new File("/home/fejiang/IdeaProjects/csv/tabler.csv");
         Table table1 = Table.readCSV(schema, opts, file1);
         System.out.println(table1.getRowCount());
-        Table table3 = Table.concatenate(table1, table1);
+        //Table table3 = Table.concatenate(table1);
 
         File file2 = new File("/home/fejiang/IdeaProjects/csv/tabler.csv");
         Table table2 = Table.readCSV(schema, opts, file2);
-        //Table table4 = Table.concatenate(table2, table2);
+        Table table4 = Table.concatenate(table2, table2, table2, table2, table2);
         System.out.println(table2.getRowCount());
 
         // Measure execution time
         long startTime = System.nanoTime();
-        GatherMap[] map = BucketChainHashJoin.innerJoinGatherMaps(table3, table2, true);
+        GatherMap[] map = BucketChainHashJoin.innerJoinGatherMaps(table1, table4, true);
         long endTime = System.nanoTime();
 
         // Calculate execution time

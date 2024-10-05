@@ -3,6 +3,11 @@
 #include <cuda.h>
 #include <cub/cub.cuh> 
 #include <iostream>
+#include <rmm/cuda_stream.hpp>
+#include <rmm/device_buffer.hpp>
+#include <rmm/device_scalar.hpp>
+#include <rmm/device_uvector.hpp>
+#include <rmm/mr/device/per_device_resource.hpp>
 
 #include "mem_manager.hpp"
 
@@ -77,7 +82,10 @@ void checkLast(const char* const file, const int line)
 */}
 
 inline void alloc_by_cuda(void** ptr, bool clear, size_t sz, cudaStream_t stream) {
-    CHECK_CUDA_ERROR(cudaMallocAsync(ptr, sz, stream));
+
+    auto mr = rmm::mr::get_current_device_resource();
+    *ptr = mr->allocate(sz, stream);
+    //CHECK_CUDA_ERROR(cudaMallocAsync(ptr, sz, stream));
     if(clear) CHECK_CUDA_ERROR(cudaMemsetAsync(*ptr, 0, sz, stream));
 }
 
@@ -104,7 +112,7 @@ inline void free_rmm_mempool(void* ptr, cudaStream_t stream) {
     mm->release(ptr, stream);
 }
 
-//#define USE_CUDA_MEMALLOC
+#define USE_CUDA_MEMALLOC
 template<typename T>
 inline void allocate_mem(T** ptr, bool clear = true, size_t sz = sizeof(T), cudaStream_t stream = 0) {
     assert(ptr != nullptr);

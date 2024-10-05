@@ -295,8 +295,10 @@ private:
         }
 
         // Perform cudaMemcpy and check for errors
+        /*
         cudaError_t cudaStatus;
         cudaStatus = cudaMemcpy(r_key_partitions, data_ptr_r, nr*sizeof(int32_t), cudaMemcpyDefault);
+
         if (cudaStatus != cudaSuccess) {
             fprintf(stderr, "R table cudaMemcpy failed: %s\n", cudaGetErrorString(cudaStatus));
             // Handle the error appropriately, e.g., throw an exception or return an error code
@@ -304,6 +306,8 @@ private:
         }else{
             //std::cout << "R table memory allocated cudaSuccess!" << std::endl;
         }
+        */
+        r_key_partitions = const_cast<key_t*>(reinterpret_cast<const key_t*>(data_ptr_r));
     }
 
     void swap_r_s() {
