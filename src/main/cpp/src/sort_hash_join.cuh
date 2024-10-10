@@ -56,15 +56,15 @@ public:
         allocate_mem(&s_offsets, false, sizeof(int)*n_partitions);
         allocate_mem(&r_work,    false, sizeof(uint64_t)*n_partitions*2);
         allocate_mem(&s_work,    false, sizeof(uint64_t)*n_partitions*2);
-        allocate_mem(&rkeys_partitions, false, sizeof(key_t)*(nr+2048));
-        allocate_mem(&skeys_partitions, false, sizeof(key_t)*(ns+2048));
-        allocate_mem(&rvals_partitions, false, sizeof(r_biggest_col_t)*(nr+2048));
-        allocate_mem(&svals_partitions, false, sizeof(s_biggest_col_t)*(ns+2048));
+        allocate_mem(&rkeys_partitions, false, sizeof(key_t)*(nr+2048));  // 1 Mc used, memory used now.
+        allocate_mem(&skeys_partitions, false, sizeof(key_t)*(ns+2048));  // 2 Mc used, memory used now.
+        allocate_mem(&rvals_partitions, false, sizeof(r_biggest_col_t)*(nr+2048)); // 3 Mc used, memory used now.
+        allocate_mem(&svals_partitions, false, sizeof(s_biggest_col_t)*(ns+2048)); // 4 Mc used, memory used now.
         allocate_mem(&total_work); // initialized to zero
 
         if constexpr (!early_materialization) {
-            allocate_mem(&r_match_idx, false, sizeof(int)*circular_buffer_size);
-            allocate_mem(&s_match_idx, false, sizeof(int)*circular_buffer_size);
+            allocate_mem(&r_match_idx, false, sizeof(int)*circular_buffer_size); // 5 Mc used
+            allocate_mem(&s_match_idx, false, sizeof(int)*circular_buffer_size); // 6 Mc Used
         }
 
         cudaEventCreate(&start);
@@ -142,14 +142,18 @@ private:
         partition_pairs(COL(r,0), rvals,
                         rkeys_partitions, (r_val_t*)rvals_partitions,
                         r_offsets, nr);
-
+        // Peek Mt + 2Mc
         partition_pairs(COL(s,0), svals,
                         skeys_partitions, (s_val_t*)svals_partitions,
                         s_offsets, ns);
         generate_work_units<<<num_tb(n_partitions,512),512>>>(r_offsets, s_offsets, r_work, s_work, total_work, n_partitions, threshold);
+        // Peek Mt + 4Mc
+        // Used mem after exit = 4 Mc
     }
 
     void join_copartitions() {
+        // Allocate r_match_idx and s_match_idx(2Mc)
+        // Peek mem = 6Mc
         CHECK_LAST_CUDA_ERROR();
         constexpr int NT = 512;
         constexpr int VT = 4;
@@ -168,7 +172,7 @@ private:
                                                     radix_bits, 4096,
                                                     d_n_matches,
                                                     COL(out,0), COL(out,1), COL(out,2),
-                                                    circular_buffer_size);
+                                                    circular_buffer_size); // 4n GPU memory + 3n GPU memory = 7n memory
         }
         else {
             size_t sm_bytes = (bucket_size + 512) * (sizeof(key_t) + sizeof(int) + sizeof(int16_t)) + // elem, payload and next resp.
@@ -192,14 +196,26 @@ private:
         }
         CHECK_LAST_CUDA_ERROR();
         cudaMemcpy(&n_matches, d_n_matches, sizeof(n_matches), cudaMemcpyDeviceToHost);
+        // free 2Mc
+        // Used mem after exit = 4Mc
     }
 
     void materialize_by_gather() {
+        // 2 already transformed payload columns
+        // Alloc 0
+        // Peek mem = 4Mc
+        // Used after Exit 2Mc
+
+        // Materialize a not yet transformed payload column
+        // Mt + 2Mc allocated
+
+        // after a column has been materialized Mt + Mc to be freed.transformed
+        // Peek mem used = Mt + 4Mc
         if constexpr (!early_materialization) {
             // partition each payload columns and then gather
             for_<r_cols-1>([&](auto i) {
                 using val_t = std::tuple_element_t<i.value+1, typename TupleR::value_type>;
-                if(i.value > 0) partition_pairs(COL(r, 0), COL(r, i.value+1), rkeys_partitions, (val_t*)rvals_partitions, nullptr, nr);
+                if(i.value > 0) partition_pairs(COL(r, 0), COL(r, i.value+1), rkeys_partitions, (val_t*)rvals_partitions, nullptr, nr); // Mt + 2Mc is allocated.
                 thrust::device_ptr<val_t> dev_data_ptr((val_t*)rvals_partitions);
                 thrust::device_ptr<int> dev_idx_ptr(r_match_idx);
                 thrust::device_ptr<val_t> dev_out_ptr(COL(out, i.value+1));
