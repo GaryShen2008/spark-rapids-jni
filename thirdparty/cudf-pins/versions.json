@@ -44,7 +44,7 @@
     {
       "always_download" : true,
       "git_shallow" : false,
-      "git_tag" : "adc3a8ef11dd0053f77a908db9db54fe7c92d5ff",
+      "git_tag" : "22668fa1d9ea5918f463c52bcdcb5ef181e5d1d0",
       "git_url" : "https://github.com/rapidsai/kvikio.git",
       "version" : "24.12"
     },
@@ -127,15 +127,15 @@
       "git_url" : "https://github.com/NVIDIA/nvcomp.git",
       "proprietary_binary" : 
       {
-        "aarch64-linux" : "https://developer.download.nvidia.com/compute/nvcomp/${version}/local_installers/nvcomp-linux-sbsa-${version}-cuda${cuda-toolkit-version-mapping}.tar.gz",
-        "x86_64-linux" : "https://developer.download.nvidia.com/compute/nvcomp/${version}/local_installers/nvcomp-linux-x86_64-${version}-cuda${cuda-toolkit-version-mapping}.tar.gz"
+        "aarch64-linux" : "https://developer.download.nvidia.com/compute/nvcomp/${version}/local_installers/nvcomp_${version}_SBSA_${cuda-toolkit-version-mapping}.tgz",
+        "x86_64-linux" : "https://developer.download.nvidia.com/compute/nvcomp/${version}/local_installers/nvcomp_${version}_x86_64_${cuda-toolkit-version-mapping}.tgz"
       },
       "proprietary_binary_cuda_version_mapping" : 
       {
         "11" : "11.x",
         "12" : "12.x"
       },
-      "version" : "4.0.1"
+      "version" : "3.0.6"
     },
     "nvtx3" : 
     {
@@ -149,7 +149,7 @@
     {
       "always_download" : true,
       "git_shallow" : false,
-      "git_tag" : "90a5631e1093ce44c4feceb88fcf557c3dfc043b",
+      "git_tag" : "1b70ffdd5ab460ac481f1575c42e8c1fccfda792",
       "git_url" : "https://github.com/rapidsai/rmm.git",
       "version" : "24.12"
     },

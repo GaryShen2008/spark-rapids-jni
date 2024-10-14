@@ -110,6 +110,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <slf4j.version>1.7.30</slf4j.version>
     <submodule.check.skip>false</submodule.check.skip>
+    <submodule.patch.skip>false</submodule.patch.skip>
     <antrun.version>3.0.0</antrun.version>
     <hilbert.version>0.2.2</hilbert.version>
   </properties>
@@ -393,10 +394,42 @@
             </goals>
           </execution>
           <execution>
+            <id>cudf patch</id>
+            <phase>validate</phase>
+            <configuration>
+              <skip>${submodule.patch.skip}</skip>
+              <target>
+                <exec dir="${project.basedir}"
+                      failonerror="true"
+                      executable="${project.basedir}/build/apply-patches">
+                </exec>
+              </target>
+            </configuration>
+            <goals>
+              <goal>run</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>cudf un-patch</id>
+            <phase>clean</phase>
+            <configuration>
+              <skip>${submodule.patch.skip}</skip>
+              <target>
+                <exec dir="${project.basedir}"
+                      failonerror="true"
+                      executable="${project.basedir}/build/unapply-patches">
+                </exec>
+              </target>
+            </configuration>
+            <goals>
+              <goal>run</goal>
+            </goals>
+          </execution>
+          <execution>
             <id>build-libcudf</id>
             <phase>validate</phase>
             <configuration>
-              <target xmlns:if="ant:if">
+              <target xmlns:if="ant:if" xmlns:unless="ant:unless">
                 <condition property="needConfigure">
                   <or>
                     <istrue value="${libcudf.build.configure}"/>
@@ -433,7 +466,8 @@
                 </exec>
                 <exec dir="${libcudf.build.path}"
                       failonerror="true"
-                      executable="cmake">
+                      executable="cmake"
+                      unless:true="${submodule.patch.skip}">
                   <arg value="--build"/>
                   <arg value="${libcudf.build.path}"/>
                   <arg value="--target"/>
@@ -450,6 +484,7 @@
             <id>build-libcudfjni</id>
             <phase>validate</phase>
             <configuration>
+              <skip>${submodule.patch.skip}</skip>
               <target>
                 <mkdir dir="${libcudfjni.build.path}"/>
                 <exec dir="${libcudfjni.build.path}"
@@ -485,6 +520,7 @@
             <id>build-sparkrapidsjni</id>
             <phase>validate</phase>
             <configuration>
+              <skip>${submodule.patch.skip}</skip>
               <target>
                 <mkdir dir="${native.build.path}"/>
                 <exec dir="${native.build.path}"
@@ -523,6 +559,7 @@
             <id>build-info</id>
             <phase>generate-resources</phase>
             <configuration>
+              <skip>${submodule.patch.skip}</skip>
               <target>
                 <mkdir dir="${project.build.directory}/extra-resources"/>
                 <exec executable="bash"
@@ -606,6 +643,8 @@
                   <directory>${libcudfjni.build.path}</directory>
                   <includes>
                     <include>libnvcomp.so</include>
+                    <include>libnvcomp_gdeflate.so</include>
+                    <include>libnvcomp_bitcomp.so</include>
                   </includes>
                 </resource>
               </resources>
