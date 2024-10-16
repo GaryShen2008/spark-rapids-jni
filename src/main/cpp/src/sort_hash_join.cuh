@@ -50,16 +50,17 @@ public:
 
         allocate_mem(&d_n_matches);
 
-        using s_biggest_col_t = typename TupleS::biggest_col_t;
-        using r_biggest_col_t = typename TupleR::biggest_col_t;
+        //using s_biggest_col_t = typename TupleS::biggest_col_t;
+        //using r_biggest_col_t = typename TupleR::biggest_col_t;
+        // here I assume every cal is of type int32_t
         allocate_mem(&r_offsets, false, sizeof(int)*n_partitions);
         allocate_mem(&s_offsets, false, sizeof(int)*n_partitions);
         allocate_mem(&r_work,    false, sizeof(uint64_t)*n_partitions*2);
         allocate_mem(&s_work,    false, sizeof(uint64_t)*n_partitions*2);
         allocate_mem(&rkeys_partitions, false, sizeof(key_t)*(nr+2048));  // 1 Mc used, memory used now.
         allocate_mem(&skeys_partitions, false, sizeof(key_t)*(ns+2048));  // 2 Mc used, memory used now.
-        allocate_mem(&rvals_partitions, false, sizeof(r_biggest_col_t)*(nr+2048)); // 3 Mc used, memory used now.
-        allocate_mem(&svals_partitions, false, sizeof(s_biggest_col_t)*(ns+2048)); // 4 Mc used, memory used now.
+        allocate_mem(&rvals_partitions, false, sizeof(int32_t)*(nr+2048)); // 3 Mc used, memory used now.
+        allocate_mem(&svals_partitions, false, sizeof(int32_t)*(ns+2048)); // 4 Mc used, memory used now.
         allocate_mem(&total_work); // initialized to zero
 
         if constexpr (!early_materialization) {
@@ -118,7 +119,7 @@ public:
     float mat_time {0};
 
 private:
-
+    template<typename KeyT, typename ValueT>
     void partition_pairs(KeyT*    keys,
                         ValueT*   values,
                         KeyT*     keys_out,
@@ -133,17 +134,17 @@ private:
     }
 
     void partition() {
-        using r_val_t = std::tuple_element_t<1, typename TupleR::value_type>;
-        using s_val_t = std::tuple_element_t<1, typename TupleS::value_type>;
+        using r_val_t = int32_t;
+        using s_val_t = int32_t;
 
-        auto rvals = COL(r,1);
-        auto svals = COL(s,1);
+        auto rvals = r.column(1);
+        auto svals = s.column(1);
 
-        partition_pairs(COL(r,0), rvals,
+        partition_pairs(r.column(0), rvals,
                         rkeys_partitions, (r_val_t*)rvals_partitions,
                         r_offsets, nr);
         // Peek Mt + 2Mc
-        partition_pairs(COL(s,0), svals,
+        partition_pairs(s.column(0), svals,
                         skeys_partitions, (s_val_t*)svals_partitions,
                         s_offsets, ns);
         generate_work_units<<<num_tb(n_partitions,512),512>>>(r_offsets, s_offsets, r_work, s_work, total_work, n_partitions, threshold);
@@ -238,22 +239,24 @@ private:
     const cudf::table_view r;
     const cudf::table_view s;
 
-    static constexpr auto  r_cols = TupleR::num_cols;
-    static constexpr auto  s_cols = TupleS::num_cols;
+    using key_t = int32_t;
+    using r_val_t = int32_t;
+    using s_val_t = int32_t;
+
+    static constexpr auto  r_cols = r.num_columns();
+    static constexpr auto  s_cols = s.num_columns();
     static constexpr bool r_materialize_early = (r_cols == 2 && !kAlwaysLateMaterialization);
     static constexpr bool s_materialize_early = (s_cols == 2 && !kAlwaysLateMaterialization);
     static constexpr bool early_materialization = (r_materialize_early && s_materialize_early);
     static constexpr uint32_t log2_bucket_size = 12;
     static constexpr uint32_t bucket_size = (1 << log2_bucket_size);
     static constexpr int LOCAL_BUCKETS_BITS = 11;
-    static constexpr int SHUFFLE_SIZE = (early_materialization ? ((TupleR::row_bytes + TupleS::row_bytes <= 24) ? 32 : 24) : (sizeof(std::tuple_element_t<0, typename TupleR::value_type>) == 4 ? 32 : 16));
+    static constexpr int SHUFFLE_SIZE = (early_materialization ? ((r_cols * sizeof(int_32t) * s_cols * sizeof(int_32t) <= 24) ? 32 : 24) : (sizeof(r_val_t) == 4 ? 32 : 16));
     static constexpr int threshold = 2*bucket_size;
 
-    using key_t = std::tuple_element_t<0, typename TupleR::value_type>;
-    using r_val_t = std::tuple_element_t<1, typename TupleR::value_type>;
-    using s_val_t = std::tuple_element_t<1, typename TupleS::value_type>;
-
-
+    //using key_t = std::tuple_element_t<0, typename TupleR::value_type>;
+    //using r_val_t = std::tuple_element_t<1, typename TupleR::value_type>;
+    //using s_val_t = std::tuple_element_t<1, typename TupleS::value_type>;
     TupleOut out;
 
     int nr;

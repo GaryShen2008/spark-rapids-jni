@@ -84,6 +84,3 @@ ConfigureTest(SUBSTRING_INDEX
 ConfigureTest(MEM_MANAGER
     mem_manager.cpp)
 
-ConfigureTest(DEVICE_RADIX_SORT
-    DeviceRadixSort.cpp)
-

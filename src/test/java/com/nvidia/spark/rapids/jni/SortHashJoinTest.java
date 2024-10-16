@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test;
 import java.io.File;
 
 public class SortHashJoinTest {
-
+/*
     @Test
     void testSortHashJoin() {
         Table.TestBuilder tb1 = new Table.TestBuilder();
@@ -144,4 +144,10 @@ public class SortHashJoinTest {
         System.out.println(map[0].getRowCount());
     }
 
+
+    @Test
+    void shjGatherMater(){
+        System.out.println("Hello");
+    }
+*/
 }

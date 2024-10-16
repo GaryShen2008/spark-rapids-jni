@@ -32,7 +32,6 @@ public:
     , first_bit(first_bit)
     , circular_buffer_size(circular_buffer_size)
     {
-        //std::cout << " I am in phj.\n";
         nr = static_cast<int>(r.num_rows());
         ns = static_cast<int>(s.num_rows());
 
