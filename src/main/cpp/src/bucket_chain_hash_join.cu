@@ -30,12 +30,14 @@ inner_join(table_view const& left_input,
     int num_s = right_input.num_rows();
     int circular_buffer_size = std::max(num_r, num_s);
     // Return a pair of unique_ptrs to the vectors
-    PartitionHashJoin phj(left_input, right_input, 6, 9, 0, circular_buffer_size);
-    auto result = phj.join(stream, mr);
-    std::cout << "partition_time " << phj.partition_time << std::endl;
-    std::cout << "join_time " << phj.join_time << std::endl;
-    std::cout << "copy_device_vector_time " << phj.copy_device_vector_time << std::endl;
-    std::cout << "in_copy_time " << phj.in_copy_time << std::endl;
+    //PartitionHashJoin phj(left_input, right_input, 6, 9, 0, circular_buffer_size);
+    //auto result = phj.join(stream, mr);
+    SortHashJoin shj(left_input, right_input, 0, 15, circular_buffer_size);
+    auto result = shj.join(stream, mr);
+    //std::cout << "partition_time " << phj.partition_time << std::endl;
+    //std::cout << "join_time " << phj.join_time << std::endl;
+    //std::cout << "copy_device_vector_time " << phj.copy_device_vector_time << std::endl;
+    //std::cout << "in_copy_time " << phj.in_copy_time << std::endl;
     //phj.print_match_indices();
     return result;
 }

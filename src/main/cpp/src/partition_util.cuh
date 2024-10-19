@@ -60,8 +60,12 @@ public:
         assert(end_bit <= sizeof(key_t)*8);
 
         allocate_mem(&d_counts_out, false, sizeof(int)*(n_partitions));
-        
-        cub::DeviceRadixSort::SortPairs(d_temp_storage, temp_storage_bytes, keys, keys_out, values, values_out, N, begin_bit, end_bit);
+        if(values == nullptr){
+            cub::DeviceRadixSort::SortKeys(d_temp_storage, temp_storage_bytes, keys, keys_out, N, begin_bit, end_bit);
+        }
+        else {
+            cub::DeviceRadixSort::SortPairs(d_temp_storage, temp_storage_bytes, keys, keys_out, values, values_out, N, begin_bit, end_bit);
+        }
         allocate_mem(&d_temp_storage, false, temp_storage_bytes);
     }
 
@@ -84,15 +88,19 @@ public:
     
     void process() {
         // Reuse the radix sort to partition
-        cub::DeviceRadixSort::SortPairs(d_temp_storage, temp_storage_bytes, keys, keys_out, values, values_out, N, begin_bit, end_bit); 
-
+       if(values == nullptr){
+            cub::DeviceRadixSort::SortKeys(d_temp_storage, temp_storage_bytes, keys, keys_out, N, begin_bit, end_bit);
+        }
+        else {
+            cub::DeviceRadixSort::SortPairs(d_temp_storage, temp_storage_bytes, keys, keys_out, values, values_out, N, begin_bit, end_bit);
+        }
         // Compute the offsets
         if(offsets) {
             RadixExtractor<key_t> conversion_op(begin_bit, end_bit);
             cub::TransformInputIterator<key_t, RadixExtractor<key_t>, key_t*> itr(keys_out, conversion_op);
             
             size_t temp = 0;
-            cub::DeviceHistogram::HistogramEven(nullptr, temp, itr, , n_partitions+1, 0, n_partitions, N);
+            cub::DeviceHistogram::HistogramEven(nullptr, temp, itr, d_counts_out, n_partitions+1, 0, n_partitions, N);
             if(temp > temp_storage_bytes) {
                 release_mem(d_temp_storage);
                 allocate_mem(&d_temp_storage, false, temp);
@@ -138,9 +146,8 @@ __global__ void join_copartitions_arr(const KeyT* R,
                                       const int   log_parts, // number of partitions in log2
                                       const int   max_bucket_size, // more like max. partition size
                                       int*        results,
-                                      KeyT*       keys_out, 
-                                      ValT*       r_output, 
-                                      ValT*       s_output, 
+                                      ValT*       r_output,
+                                      ValT*       s_output,
                                       const int   circular_buffer_size) {
     constexpr int LOCAL_BUCKETS = (1 << LOCAL_BUCKETS_BITS);
 
@@ -283,7 +290,7 @@ __global__ void join_copartitions_arr(const KeyT* R,
                         if(lid < SHUFFLE_SIZE) {
                             r_output[w_pos] = warp_shuffle->val_R_elem[lid];
                             s_output[w_pos] = warp_shuffle->val_S_elem[lid];
-                            keys_out[w_pos] = warp_shuffle->key_elem[lid];
+                            //keys_out[w_pos] = warp_shuffle->key_elem[lid];
                         }
 
                         wr_offset -= SHUFFLE_SIZE;
@@ -316,7 +323,7 @@ __global__ void join_copartitions_arr(const KeyT* R,
         if(lid < SHUFFLE_SIZE) {
             r_output[w_pos] = warp_shuffle->val_R_elem[lid];
             s_output[w_pos] = warp_shuffle->val_S_elem[lid];
-            keys_out[w_pos] = warp_shuffle->key_elem[lid];
+            //keys_out[w_pos] = warp_shuffle->key_elem[lid];
         }
     }
 }

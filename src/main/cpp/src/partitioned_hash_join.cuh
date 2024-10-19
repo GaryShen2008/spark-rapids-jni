@@ -277,10 +277,10 @@ private:
     }
 
     void in_copy(key_t* r_key_partitions, cudf::table_view r_in){
-        //std::cout << "first_column initialized before\n";
+
         // Get the column_view for the first column (index 0) because we only support single key join now.
         cudf::column_view first_column = r_in.column(0);
-        //std::cout << "first_column initialized after\n";
+
         // Get the type of the first column.
         cudf::data_type dtype_r = first_column.type();
         const void* data_ptr_r;
@@ -293,19 +293,6 @@ private:
              throw std::runtime_error("R key type not supported");
         }
 
-        // Perform cudaMemcpy and check for errors
-        /*
-        cudaError_t cudaStatus;
-        cudaStatus = cudaMemcpy(r_key_partitions, data_ptr_r, nr*sizeof(int32_t), cudaMemcpyDefault);
-
-        if (cudaStatus != cudaSuccess) {
-            fprintf(stderr, "R table cudaMemcpy failed: %s\n", cudaGetErrorString(cudaStatus));
-            // Handle the error appropriately, e.g., throw an exception or return an error code
-            throw std::runtime_error("cudaMemcpy failed");
-        }else{
-            //std::cout << "R table memory allocated cudaSuccess!" << std::endl;
-        }
-        */
         r_key_partitions = const_cast<key_t*>(reinterpret_cast<const key_t*>(data_ptr_r));
     }
 
