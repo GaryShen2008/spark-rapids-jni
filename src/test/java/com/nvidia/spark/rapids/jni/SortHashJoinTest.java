@@ -10,12 +10,21 @@ public class SortHashJoinTest {
     @Test
     void testSortHashJoin() {
         Table.TestBuilder tb1 = new Table.TestBuilder();
-        tb1.column(1, 2, 3, 4);
+        tb1.column(1, 9, 2, 3, 4, 3,99999);
+        tb1.column(1, 9, 2, 3, 4, 3, 9);
+        // 1 2 3 3 4 9
+        // 0 1 2 3 4 5
 
+        // 1 2 3 4 6 8 9 12 14 19
+        // 0 1 2 3 4 5 6  7  8  9
+
+
+        // 0 1 2 3 4 5
+        // 0 1 2 2 3 6
 
         Table.TestBuilder tb2 = new Table.TestBuilder();
-        tb2.column(1, 2, 3, 6, 8, 4, 12, 14, 19);
-
+        tb2.column(1, 9, 2, 3, 6, 8, 4, 12, 14, 19, 99999);
+        tb2.column(1, 9, 2, 3, 6, 8, 777, 12, 14, 19, 9);
 
         Table left = tb1.build();
         Table right = tb2.build();
@@ -33,15 +42,43 @@ public class SortHashJoinTest {
         System.out.println("Execution time: " + durationMillis + " ms");
 
         System.out.println(map[0].getRowCount());
-    }
 
+        ColumnView colV1 = map[0].toColumnView(0L, (int) map[0].getRowCount());
+        HostColumnVector HCV = colV1.copyToHost();
+        System.out.println(HCV.toString());
+
+        for(int i = 0; i < (int) map[0].getRowCount(); i++){
+            System.out.print(colV1.getScalarElement(i).getInt() + " ");
+        }
+
+        System.out.println();
+
+        ColumnView colV2 = map[1].toColumnView(0L, (int) map[1].getRowCount());
+
+        for(int i = 0; i < (int) map[1].getRowCount(); i++){
+            System.out.print(colV2.getScalarElement(i).getInt() + " ");
+        }
+
+        System.out.println();
+
+        Table result = BucketChainHashJoin.gather(left, right, colV1, colV2);
+
+        for (int i = 0; i < result.getNumberOfColumns(); i++) {
+            ColumnVector column = result.getColumn(i);
+            System.out.print("Column " + i + ": ");
+            for (int j = 0; j < column.getRowCount(); j++) {
+                System.out.print(column.getScalarElement(j).getInt() + " "); // Adjust the get method based on data type}
+            }
+        }
+
+    }
     @Test
     void testCUDFHASHJoin() {
         Table.TestBuilder tb1 = new Table.TestBuilder();
-        tb1.column(1, 2, 3, 4);
+        tb1.column(199, 2, 3, 4);
 
         Table.TestBuilder tb2 = new Table.TestBuilder();
-        tb2.column(1, 2, 3, 6, 8, 3, 3, 3, 2);
+        tb2.column(199, 2, 3, 6, 8, 3, 3, 3, 2);
 
         Table left = tb1.build();
         Table right = tb2.build();
@@ -57,6 +94,21 @@ public class SortHashJoinTest {
 
         // Print metrics
         System.out.println("Execution time: " + durationMillis + " ms");
+
+        ColumnView colV1 = map[0].toColumnView(0L, (int) map[0].getRowCount());
+        for(int i = 0; i < (int) map[0].getRowCount(); i++){
+            System.out.print(colV1.getScalarElement(i).getInt() + " ");
+        }
+
+        System.out.println();
+
+        ColumnView colV2 = map[1].toColumnView(0L, (int) map[1].getRowCount());
+
+        for(int i = 0; i < (int) map[1].getRowCount(); i++){
+            System.out.print(colV2.getScalarElement(i).getInt() + " ");
+        }
+
+        System.out.println();
     }
 
     @Test
@@ -93,12 +145,12 @@ public class SortHashJoinTest {
 
         File file2 = new File("/home/fejiang/Documents/tabler4.csv");
         Table table2 = Table.readCSV(schema, opts, file2);
-        Table table4 = Table.concatenate(table2, table2, table2, table2, table2);
+        Table table4 = Table.concatenate(table2, table2, table2);
         System.out.println(table2.getRowCount());
 
         // Measure execution time
         long startTime = System.nanoTime();
-        GatherMap[] map = table1.innerJoinGatherMaps(table2, true);
+        GatherMap[] map = table3.innerJoinGatherMaps(table4, true);
         long endTime = System.nanoTime();
 
         // Calculate execution time
@@ -134,7 +186,7 @@ public class SortHashJoinTest {
 
         // Measure execution time
         long startTime = System.nanoTime();
-        GatherMap[] map = BucketChainHashJoin.innerJoinGatherMaps(table1, table2, true);
+        GatherMap[] map = BucketChainHashJoin.innerJoinGatherMaps(table3, table4, true);
         long endTime = System.nanoTime();
 
         // Calculate execution time
@@ -145,12 +197,6 @@ public class SortHashJoinTest {
         System.out.println("Execution time: " + durationMillis + " ms");
 
         System.out.println(map[0].getRowCount());
-    }
-
-
-    @Test
-    void shjGatherMater(){
-        System.out.println("Hello");
     }
 
 }

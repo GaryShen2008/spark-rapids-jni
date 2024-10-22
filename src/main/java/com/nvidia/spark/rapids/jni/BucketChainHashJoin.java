@@ -46,5 +46,17 @@ public class BucketChainHashJoin {
         return maps;
     }
 
+    public static Table gather(Table table1, Table table2, ColumnView gatherMap1, ColumnView gatherMap2) {
+        return gather(table1, table2, gatherMap1, gatherMap2, OutOfBoundsPolicy.NULLIFY);
+    }
+
+    public static Table gather(Table table1, Table table2, ColumnView gatherMap1, ColumnView gatherMap2, OutOfBoundsPolicy outOfBoundsPolicy) {
+        boolean checkBounds = outOfBoundsPolicy == OutOfBoundsPolicy.NULLIFY;
+        return new Table(gather(table1.getNativeView(), table2.getNativeView(), gatherMap1.getNativeView(), gatherMap2.getNativeView(), checkBounds));
+    }
+
     private static native long[] innerJoinGatherMaps(long leftKeys, long rightKeys, boolean compareNullsEqual);
+
+    private static native long[] gather(long tableHandle1, long tableHandle2, long gatherView1, long gatherView2, boolean checkBounds);
+
 }

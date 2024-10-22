@@ -5,11 +5,16 @@
 #include <cudf/column/column_factories.hpp>
 #include <cudf/scalar/scalar.hpp>
 #include <cudf/types.hpp>
+#include <cudf/column/column_view.hpp>
 #include <cudf/strings/strings_column_view.hpp>
 #include <cudf/dictionary/dictionary_column_view.hpp>
+#include <cudf/table/table.hpp>
+#include <cudf/filling.hpp>
+
 #include <rmm/device_buffer.hpp>
 #include <rmm/device_vector.hpp>
 #include <thrust/device_vector.h>
+#include <thrust/host_vector.h>
 #include "utils.cuh"
 
 #include "phj_util.cuh"
@@ -75,6 +80,44 @@ public:
         std::cout << "Numeric column size: " << numeric_col->size() << std::endl;
     }
 
+    void print_column_view(cudf::column_view const& col) {
+        // Check the type of the column
+        if (col.type().id() == cudf::type_id::INT32) {
+            // Create a device vector from the column data
+            thrust::device_vector<int> d_data(col.begin<int>(), col.end<int>());
+
+            // Copy to host
+            thrust::host_vector<int> h_data = d_data;
+
+            // Print the data
+            for (auto const& val : h_data) {
+                std::cout << val << " ";
+            }
+            std::cout << std::endl;
+        }
+        else {
+            // Handle other types as needed
+            std::cout << "Unsupported type" << std::endl;
+        }
+    }
+
+    static std::unique_ptr<cudf::table> gatherTest() {
+        std::cout << "Hello I am in gatherTest: " << std::endl;
+
+        // Create a column with 5 integers
+        auto column = cudf::make_numeric_column(cudf::data_type(cudf::type_id::INT32), 5);
+        auto mutable_view = column->mutable_view();
+
+        // Fill the column with the value 1
+        cudf::fill_in_place(mutable_view, 0, 5, cudf::numeric_scalar<int32_t>(1));
+
+        // Create a table from the column
+        std::vector<std::unique_ptr<cudf::column>> columns;
+        columns.push_back(std::move(column));
+
+        return std::make_unique<cudf::table>(std::move(columns));
+    }
+
     std::pair<std::unique_ptr<rmm::device_uvector<cudf::size_type>>,
               std::unique_ptr<rmm::device_uvector<cudf::size_type>>> join(rmm::cuda_stream_view stream,
                                 rmm::device_async_resource_ref mr){
@@ -97,6 +140,41 @@ public:
         return std::make_pair(std::move(r_match_uvector), std::move(s_match_uvector));
 
     }
+
+    void materialize_by_gather() {
+        // 2 already transformed payload columns
+        // Alloc 0
+        // Peek mem = 4Mc
+        // Used after Exit 2Mc
+
+        // Materialize a not yet transformed payload column
+        // Mt + 2Mc allocated
+
+        // after a column has been materialized Mt + Mc to be freed.transformed
+        // Peek mem used = Mt + 4Mc
+
+       // partition each payload columns and then gather
+       /*
+       for_<r_cols-1>([&](auto i) {
+            using val_t = std::tuple_element_t<i.value+1, typename TupleR::value_type>;
+            if(i.value > 0) partition_pairs(COL(r, 0), COL(r, i.value+1), rkeys_partitions, (val_t*)rvals_partitions, nullptr, nr); // Mt + 2Mc is allocated.
+            thrust::device_ptr<val_t> dev_data_ptr((val_t*)rvals_partitions);
+            thrust::device_ptr<int> dev_idx_ptr(r_match_idx);
+            thrust::device_ptr<val_t> dev_out_ptr(COL(out, i.value+1));
+            thrust::gather(dev_idx_ptr, dev_idx_ptr+std::min(circular_buffer_size, n_matches), dev_data_ptr, dev_out_ptr);
+       });
+       for_<s_cols-1>([&](auto i) {
+            constexpr auto k = i.value+r_cols;
+            using val_t = std::tuple_element_t<i.value+1, typename TupleS::value_type>;
+            if(i.value > 0) partition_pairs(COL(s, 0), COL(s, i.value+1), skeys_partitions, (val_t*)svals_partitions, nullptr, ns);
+            thrust::device_ptr<val_t> dev_data_ptr((val_t*)svals_partitions);
+            thrust::device_ptr<int> dev_idx_ptr(s_match_idx);
+            thrust::device_ptr<val_t> dev_out_ptr(COL(out, k));
+            thrust::gather(dev_idx_ptr, dev_idx_ptr+std::min(circular_buffer_size, n_matches), dev_data_ptr, dev_out_ptr);
+       });
+       */
+    }
+
 
     ~SortHashJoin() {
         release_mem(d_n_matches);
@@ -235,6 +313,16 @@ private:
         // Peek Mt + 4Mc
         // Used mem after exit = 4 Mc
         std::cout << "hello I am 1.1.5" << std::endl;
+
+        key_t* h_rkeys_partitions = new key_t[nr];;
+        cudaMemcpy(h_rkeys_partitions, rkeys_partitions, sizeof(key_t)*nr, cudaMemcpyDeviceToHost);
+        for (long i = 0; i < nr; ++i) {
+            std::cout << h_rkeys_partitions[i] << " ";
+        }
+
+        std::cout << std::endl;
+        delete[] h_rkeys_partitions;
+
     }
 
     void join_copartitions() {
@@ -269,39 +357,6 @@ private:
         // Used mem after exit = 4Mc
     }
 
-    void materialize_by_gather() {
-        // 2 already transformed payload columns
-        // Alloc 0
-        // Peek mem = 4Mc
-        // Used after Exit 2Mc
-
-        // Materialize a not yet transformed payload column
-        // Mt + 2Mc allocated
-
-        // after a column has been materialized Mt + Mc to be freed.transformed
-        // Peek mem used = Mt + 4Mc
-
-       // partition each payload columns and then gather
-       /*
-       for_<r_cols-1>([&](auto i) {
-            using val_t = std::tuple_element_t<i.value+1, typename TupleR::value_type>;
-            if(i.value > 0) partition_pairs(COL(r, 0), COL(r, i.value+1), rkeys_partitions, (val_t*)rvals_partitions, nullptr, nr); // Mt + 2Mc is allocated.
-            thrust::device_ptr<val_t> dev_data_ptr((val_t*)rvals_partitions);
-            thrust::device_ptr<int> dev_idx_ptr(r_match_idx);
-            thrust::device_ptr<val_t> dev_out_ptr(COL(out, i.value+1));
-            thrust::gather(dev_idx_ptr, dev_idx_ptr+std::min(circular_buffer_size, n_matches), dev_data_ptr, dev_out_ptr);
-       });
-       for_<s_cols-1>([&](auto i) {
-            constexpr auto k = i.value+r_cols;
-            using val_t = std::tuple_element_t<i.value+1, typename TupleS::value_type>;
-            if(i.value > 0) partition_pairs(COL(s, 0), COL(s, i.value+1), skeys_partitions, (val_t*)svals_partitions, nullptr, ns);
-            thrust::device_ptr<val_t> dev_data_ptr((val_t*)svals_partitions);
-            thrust::device_ptr<int> dev_idx_ptr(s_match_idx);
-            thrust::device_ptr<val_t> dev_out_ptr(COL(out, k));
-            thrust::gather(dev_idx_ptr, dev_idx_ptr+std::min(circular_buffer_size, n_matches), dev_data_ptr, dev_out_ptr);
-       });
-       */
-    }
 
 private:
 

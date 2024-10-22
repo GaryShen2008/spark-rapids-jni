@@ -16,6 +16,8 @@
 #pragma once
 #include <cudf/types.hpp>
 #include <cudf/table/table_view.hpp>
+#include <cudf/copying.hpp>
+#include <cudf/detail/gather.hpp>
 
 #include <rmm/cuda_stream_view.hpp>
 #include <rmm/resource_ref.hpp>
@@ -28,4 +30,13 @@ namespace spark_rapids_jni {
                cudf::null_equality compare_nulls,
                rmm::cuda_stream_view stream      = cudf::get_default_stream(),
                rmm::device_async_resource_ref mr = rmm::mr::get_current_device_resource());
+
+
+    std::unique_ptr<cudf::table> gather(cudf::table_view const& source_table1,
+                cudf::table_view const& source_table2,
+                cudf::column_view const& gather_map1,
+                cudf::column_view const& gather_map2,
+                cudf::out_of_bounds_policy bounds_policy = cudf::out_of_bounds_policy::DONT_CHECK,
+                rmm::cuda_stream_view stream = cudf::get_default_stream(),
+                rmm::device_async_resource_ref mr = rmm::mr::get_current_device_resource());
 }
