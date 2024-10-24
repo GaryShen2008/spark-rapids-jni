@@ -62,14 +62,14 @@ public:
         allocate_mem(&d_counts_out, false, sizeof(int)*(n_partitions));
         if(values == nullptr){
             cub::DeviceRadixSort::SortKeys(d_temp_storage, temp_storage_bytes, keys, keys_out, N, begin_bit, end_bit);
-            key_t* h_rkeys_partitions = new key_t[N];;
-            cudaMemcpy(h_rkeys_partitions, keys_out, sizeof(key_t)*N, cudaMemcpyDeviceToHost);
-            for (long i = 0; i < N; ++i) {
-                std::cout << h_rkeys_partitions[i] << " ";
-            }
-
-            std::cout << std::endl;
-            delete[] h_rkeys_partitions;
+//             key_t* h_rkeys_partitions = new key_t[N];;
+//             cudaMemcpy(h_rkeys_partitions, keys_out, sizeof(key_t)*N, cudaMemcpyDeviceToHost);
+//             for (long i = 0; i < N; ++i) {
+//                 std::cout << h_rkeys_partitions[i] << " ";
+//             }
+//
+//             std::cout << std::endl;
+//             delete[] h_rkeys_partitions;
         }
         else {
             cub::DeviceRadixSort::SortPairs(d_temp_storage, temp_storage_bytes, keys, keys_out, values, values_out, N, begin_bit, end_bit);
@@ -98,14 +98,14 @@ public:
         // Reuse the radix sort to partition
        if(values == nullptr){
             cub::DeviceRadixSort::SortKeys(d_temp_storage, temp_storage_bytes, keys, keys_out, N, begin_bit, end_bit);
-            key_t* h_rkeys_partitions = new key_t[N];;
-            cudaMemcpy(h_rkeys_partitions, keys_out, sizeof(key_t)*N, cudaMemcpyDeviceToHost);
-            for (long i = 0; i < N; ++i) {
-                std::cout << h_rkeys_partitions[i] << " ";
-            }
-
-            std::cout << std::endl;
-            delete[] h_rkeys_partitions;
+//             key_t* h_rkeys_partitions = new key_t[N];;
+//             cudaMemcpy(h_rkeys_partitions, keys_out, sizeof(key_t)*N, cudaMemcpyDeviceToHost);
+//             for (long i = 0; i < N; ++i) {
+//                 std::cout << h_rkeys_partitions[i] << " ";
+//             }
+//
+//             std::cout << std::endl;
+//             delete[] h_rkeys_partitions;
         }
         else {
             cub::DeviceRadixSort::SortPairs(d_temp_storage, temp_storage_bytes, keys, keys_out, values, values_out, N, begin_bit, end_bit);

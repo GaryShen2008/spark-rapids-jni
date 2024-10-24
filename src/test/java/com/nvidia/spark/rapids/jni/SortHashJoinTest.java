@@ -79,10 +79,15 @@ public class SortHashJoinTest {
     @Test
     void testCUDFHASHJoin() {
         Table.TestBuilder tb1 = new Table.TestBuilder();
-        tb1.column(199, 2, 3, 4);
+        tb1.column(1, 9, 2, 3, 4, 3,99999);
+        tb1.column(1, 9, 2, 3, 4, 3, 9);
+        tb1.column(10, 90, 2, 3, 4, 3, 9);
 
         Table.TestBuilder tb2 = new Table.TestBuilder();
-        tb2.column(199, 2, 3, 6, 8, 3, 3, 3, 2);
+        tb2.column(1, 9, 2, 3, 6, 8, 4, 12, 14, 19, 99999);
+        tb2.column(1, 9, 2, 3, 6, 8, 777, 12, 14, 19, 9);
+        tb2.column(10, 90, 2, 3, 6, 8, 777, 12, 14, 19, 9);
+
 
         Table left = tb1.build();
         Table right = tb2.build();
@@ -154,7 +159,7 @@ public class SortHashJoinTest {
 
         // Measure execution time
         long startTime = System.nanoTime();
-        GatherMap[] map = table3.innerJoinGatherMaps(table4, true);
+        GatherMap[] map = table1.innerJoinGatherMaps(table2, true);
         long endTime = System.nanoTime();
 
         // Calculate execution time
@@ -185,12 +190,12 @@ public class SortHashJoinTest {
 
         File file2 = new File("/home/fejiang/Documents/tabler4.csv");
         Table table2 = Table.readCSV(schema, opts, file2);
-        Table table4 = Table.concatenate(table2, table2, table2);
+        Table table4 = Table.concatenate(table2, table2);
         System.out.println(table2.getRowCount());
 
         // Measure execution time
         long startTime = System.nanoTime();
-        GatherMap[] map = BucketChainHashJoin.innerJoinGatherMaps(table3, table4, true);
+        GatherMap[] map = BucketChainHashJoin.innerJoinGatherMaps(table1, table2, true);
         long endTime = System.nanoTime();
 
         // Calculate execution time

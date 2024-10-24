@@ -115,7 +115,7 @@ public:
         partition();
         join_copartitions();
         //TIME_FUNC_ACC(materialize_by_gather(), mat_time);
-        std::cout << "n_matches: " << n_matches << std::endl;
+        //std::cout << "n_matches: " << n_matches << std::endl;
         auto r_match_uvector = std::make_unique<rmm::device_uvector<cudf::size_type>>(n_matches, stream, mr);
         auto s_match_uvector = std::make_unique<rmm::device_uvector<cudf::size_type>>(n_matches, stream, mr);
 
@@ -209,7 +209,7 @@ private:
 
         // Get the column_view for the first column (index 0) because we only support single key join now.
         cudf::column_view first_column = table.column(index);
-        std::cout << first_column.size() << std::endl;
+        //std::cout << first_column.size() << std::endl;
         // Get the type of the first column.
         cudf::data_type dtype_r = first_column.type();
         const void* data_ptr_r;
@@ -250,14 +250,14 @@ private:
         // Peek Mt + 4Mc
         // Used mem after exit = 4 Mc
 
-        key_t* h_rkeys_partitions = new key_t[nr];;
-        cudaMemcpy(h_rkeys_partitions, rkeys_partitions, sizeof(key_t)*nr, cudaMemcpyDeviceToHost);
-        for (long i = 0; i < nr; ++i) {
-            std::cout << h_rkeys_partitions[i] << " ";
-        }
-
-        std::cout << std::endl;
-        delete[] h_rkeys_partitions;
+//         key_t* h_rkeys_partitions = new key_t[nr];;
+//         cudaMemcpy(h_rkeys_partitions, rkeys_partitions, sizeof(key_t)*nr, cudaMemcpyDeviceToHost);
+//         for (long i = 0; i < nr; ++i) {
+//             std::cout << h_rkeys_partitions[i] << " ";
+//         }
+//
+//         std::cout << std::endl;
+//         delete[] h_rkeys_partitions;
 
     }
 
@@ -271,7 +271,7 @@ private:
         size_t sm_bytes = (bucket_size + 512) * (sizeof(key_t) + sizeof(int) + sizeof(int16_t)) + // elem, payload and next resp.
                        (1 << LOCAL_BUCKETS_BITS) * sizeof(int32_t) + // hash table head
                         + SHUFFLE_SIZE * (NT/32) * (sizeof(key_t) + sizeof(int)*2);
-        std::cout << "sm_bytes: " << sm_bytes << std::endl;
+        //std::cout << "sm_bytes: " << sm_bytes << std::endl;
         cub::CountingInputIterator<int> r_itr(0);
         cub::CountingInputIterator<int> s_itr(0);
 
