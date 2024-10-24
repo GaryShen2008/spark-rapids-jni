@@ -32,10 +32,8 @@ namespace spark_rapids_jni {
                rmm::device_async_resource_ref mr = rmm::mr::get_current_device_resource());
 
 
-    std::unique_ptr<cudf::table> gather(cudf::table_view const& source_table1,
-                cudf::table_view const& source_table2,
-                cudf::column_view const& gather_map1,
-                cudf::column_view const& gather_map2,
+    std::unique_ptr<cudf::table> gather(cudf::table_view const& source_table,
+                cudf::column_view const& gather_map,
                 cudf::out_of_bounds_policy bounds_policy = cudf::out_of_bounds_policy::DONT_CHECK,
                 rmm::cuda_stream_view stream = cudf::get_default_stream(),
                 rmm::device_async_resource_ref mr = rmm::mr::get_current_device_resource());

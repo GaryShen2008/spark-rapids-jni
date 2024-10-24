@@ -12,15 +12,6 @@ public class SortHashJoinTest {
         Table.TestBuilder tb1 = new Table.TestBuilder();
         tb1.column(1, 9, 2, 3, 4, 3,99999);
         tb1.column(1, 9, 2, 3, 4, 3, 9);
-        // 1 2 3 3 4 9
-        // 0 1 2 3 4 5
-
-        // 1 2 3 4 6 8 9 12 14 19
-        // 0 1 2 3 4 5 6  7  8  9
-
-
-        // 0 1 2 3 4 5
-        // 0 1 2 2 3 6
 
         Table.TestBuilder tb2 = new Table.TestBuilder();
         tb2.column(1, 9, 2, 3, 6, 8, 4, 12, 14, 19, 99999);
@@ -41,12 +32,12 @@ public class SortHashJoinTest {
         // Print metrics
         System.out.println("Execution time: " + durationMillis + " ms");
 
-        System.out.println(map[0].getRowCount());
-
+        //System.out.println(map[0].getRowCount());
+        System.out.println("gather map");
         ColumnView colV1 = map[0].toColumnView(0L, (int) map[0].getRowCount());
-        HostColumnVector HCV = colV1.copyToHost();
-        System.out.println(HCV.toString());
-
+//        HostColumnVector HCV = colV1.copyToHost();
+//        System.out.println(HCV.toString());
+//
         for(int i = 0; i < (int) map[0].getRowCount(); i++){
             System.out.print(colV1.getScalarElement(i).getInt() + " ");
         }
@@ -59,12 +50,23 @@ public class SortHashJoinTest {
             System.out.print(colV2.getScalarElement(i).getInt() + " ");
         }
 
-        System.out.println();
+        System.out.println("\nthis is table 1 gathered");
 
-        Table result = BucketChainHashJoin.gather(left, right, colV1, colV2);
+        Table result = BucketChainHashJoin.gather(left, colV1);
 
         for (int i = 0; i < result.getNumberOfColumns(); i++) {
             ColumnVector column = result.getColumn(i);
+            System.out.print("Column " + i + ": ");
+            for (int j = 0; j < column.getRowCount(); j++) {
+                System.out.print(column.getScalarElement(j).getInt() + " "); // Adjust the get method based on data type}
+            }
+        }
+
+        System.out.println("\nthis is table 2");
+        Table result2 = BucketChainHashJoin.gather(right, colV2);
+
+        for (int i = 0; i < result2.getNumberOfColumns(); i++) {
+            ColumnVector column = result2.getColumn(i);
             System.out.print("Column " + i + ": ");
             for (int j = 0; j < column.getRowCount(); j++) {
                 System.out.print(column.getScalarElement(j).getInt() + " "); // Adjust the get method based on data type}

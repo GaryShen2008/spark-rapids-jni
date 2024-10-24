@@ -36,125 +36,69 @@ public:
     // int first_bit: Likely used in the hash function.
     // int radix_bits: Used to determine the number of partitions.
     // int circular_buffer_size: Size of a circular buffer used in the join operation.
-    explicit SortHashGather(cudf::table_view r_in, cudf::table_view s_in, cudf::column_view gather_map1, cudf::column_view gather_map2, int n_match, int circular_buffer_size, int first_bit,  int radix_bits)
-    : r(r_in)
-    , s(s_in)
-    , g1(gather_map1)
-    , g2(gather_map2)
-    , n(n_match)
+    explicit SortHashGather(cudf::table_view source_table, cudf::column_view gather_map, int n_match, int circular_buffer_size, int first_bit,  int radix_bits)
+    : source_table(source_table)
+    , gather_map(gather_map)
+    , n_match(n_match)
     , circular_buffer(circular_buffer_size)
     , first_bit(first_bit)
     , radix_bits(radix_bits)
     {
-        nr = static_cast<int>(r.num_rows());
-        ns = static_cast<int>(s.num_rows());
 
-        allocate_mem(&rkeys_partitions, false, sizeof(key_t)*(nr+2048));  // 1 Mc used, memory used now.
-        allocate_mem(&skeys_partitions, false, sizeof(key_t)*(ns+2048));  // 2 Mc used, memory used now.
-        allocate_mem(&rvals_partitions, false, sizeof(int32_t)*(nr+2048)); // 3 Mc used, memory used now.
-        allocate_mem(&svals_partitions, false, sizeof(int32_t)*(ns+2048)); // 4 Mc used, memory used now.
-
+        allocate_mem(&keys_partitions, false, sizeof(key_t)*(circular_buffer+2048));  // 1 Mc used, memory used now.
+        allocate_mem(&vals_partitions, false, sizeof(int32_t)*(circular_buffer+2048)); // 3 Mc used, memory used now.
         cudaEventCreate(&start);
         cudaEventCreate(&stop);
     }
 
     std::unique_ptr<cudf::table> materialize_by_gather() {
-        key_t* rkeys  {nullptr};
-        key_t* skeys  {nullptr};
+        key_t* keys  {nullptr};
 
-        key_t* rvals  {nullptr};
-        key_t* svals  {nullptr};
-
-        in_copy(&rkeys, r, 0);
-        in_copy(&skeys, s, 0);
-        auto r_cols = r.num_columns();
-        auto s_cols = s.num_columns();
+        in_copy(&keys, source_table, 0);
 
         // Assuming gather_map1 is your cudf::column_view
-        int* r_match_idx; // Device pointer
+        int* match_idx; // Device pointer
 
         // Allocate memory for s_match_idx on the device
-        cudaMalloc(&r_match_idx, g1.size() * sizeof(int));
+        cudaMalloc(&match_idx, gather_map.size() * sizeof(int));
 
         // Copy data from the column_view to the device pointer
-        cudaMemcpy(r_match_idx, g1.data<int>(), g1.size() * sizeof(int), cudaMemcpyDeviceToDevice);
-
-        // Assuming gather_map1 is your cudf::column_view
-        int* s_match_idx; // Device pointer
-
-        // Allocate memory for s_match_idx on the device
-        cudaMalloc(&s_match_idx, g2.size() * sizeof(int));
-
-        // Copy data from the column_view to the device pointer
-        cudaMemcpy(s_match_idx, g2.data<int>(), g2.size() * sizeof(int), cudaMemcpyDeviceToDevice);
-
-
+        cudaMemcpy(match_idx, gather_map.data<int>(), gather_map.size() * sizeof(int), cudaMemcpyDeviceToDevice);
 
         // Create a cudf::table from the column
         std::vector<std::unique_ptr<cudf::column>> columns;
 
-        for (int i = 1; i < r_cols; ++i) {
+        for (int i = 1; i < cols; ++i) {
 
-            std::cout << "I am inside gather" << std::endl;
             key_t* col {nullptr};
-            cudaMalloc(&col, n * sizeof(key_t));
+            cudaMalloc(&col, circular_buffer * sizeof(key_t));
+            key_t* vals {nullptr};
 
-            in_copy(&rvals, r, i);
-            if(i > 0) partition_pairs(rkeys, rvals, rkeys_partitions, (key_t*)rvals_partitions, nullptr, nr); // Mt + 2Mc is allocated.
-            thrust::device_ptr<key_t> dev_data_ptr((key_t*)rvals_partitions);
-            thrust::device_ptr<int> dev_idx_ptr(r_match_idx);
+            in_copy(&vals, source_table, i);
+            if(i > 0) partition_pairs(keys, vals, (key_t*)keys_partitions, (key_t*)vals_partitions, nullptr, circular_buffer); // Mt + 2Mc is allocated.
+            thrust::device_ptr<key_t> dev_data_ptr((key_t*)vals_partitions);
+            thrust::device_ptr<int> dev_idx_ptr(match_idx);
 
             thrust::device_ptr<key_t> dev_out_ptr(col);
-            thrust::gather(dev_idx_ptr, dev_idx_ptr+std::min(circular_buffer, n), dev_data_ptr, dev_out_ptr);
+            thrust::gather(dev_idx_ptr, dev_idx_ptr+std::min(circular_buffer, n_match), dev_data_ptr, dev_out_ptr);
             // First, create a column_view
             cudf::column_view col_view(
                 cudf::data_type{cudf::type_to_id<key_t>()},
-                static_cast<cudf::size_type>(n),
+                static_cast<cudf::size_type>(std::min(circular_buffer, n_match)),
                 col,  // assuming 'col' is a device pointer to your data
                 nullptr,  // null mask (nullptr if no null values)
                 0  // null count (0 if no null values)
             );
 
-            print_column_view(col_view);
+            //print_column_view(col_view);
 
             // Then, create a cudf::column from the column_view
             auto col_column = std::make_unique<cudf::column>(col_view);
 
-            std::cout << "I am after create a cudf::column from the column_view" << std::endl;
-
-            std::cout << "Size of columns vector: " << columns.size() << std::endl;
-
             columns.push_back(std::move(col_column));
         }
 
-        for (int i = 1; i < s_cols; ++i) {
-            key_t* col {nullptr};
-            cudaMalloc(&col, n * sizeof(key_t));
-
-            in_copy(&svals, s, i);
-            if(i > 0) partition_pairs(skeys, svals, skeys_partitions, (key_t*)svals_partitions, nullptr, ns);
-            thrust::device_ptr<key_t> dev_data_ptr((key_t*)svals_partitions);
-            thrust::device_ptr<int> dev_idx_ptr(s_match_idx);
-            thrust::device_ptr<key_t> dev_out_ptr(col);
-            thrust::gather(dev_idx_ptr, dev_idx_ptr+std::min(circular_buffer, n), dev_data_ptr, dev_out_ptr);
-            // First, create a column_view
-            cudf::column_view col_view(
-                cudf::data_type{cudf::type_to_id<key_t>()},
-                static_cast<cudf::size_type>(n),
-                col,  // assuming 'col' is a device pointer to your data
-                nullptr,  // null mask (nullptr if no null values)
-                0  // null count (0 if no null values)
-            );
-            std::cout << "inside second columns gather" << columns.size() << std::endl;
-            print_column_view(col_view);
-            // Then, create a cudf::column from the column_view
-            auto col_column = std::make_unique<cudf::column>(col_view);
-            columns.push_back(std::move(col_column));
-        }
-
-        // Return the table
         return std::make_unique<cudf::table>(std::move(columns));
-
     }
 
     void print_column_view(cudf::column_view const& col) {
@@ -180,10 +124,8 @@ public:
 
     ~SortHashGather() {
 
-        release_mem(rkeys_partitions);
-        release_mem(skeys_partitions);
-        release_mem(rvals_partitions);
-        release_mem(svals_partitions);
+        release_mem(keys_partitions);
+        release_mem(vals_partitions);
 
         cudaEventDestroy(start);
         cudaEventDestroy(stop);
@@ -199,7 +141,7 @@ private:
 
         // Get the column_view for the first column (index 0) because we only support single key join now.
         cudf::column_view first_column = table.column(index);
-        std::cout << first_column.size() << std::endl;
+        //std::cout << first_column.size() << std::endl;
         // Get the type of the first column.
         cudf::data_type dtype_r = first_column.type();
         const void* data_ptr_r;
@@ -232,25 +174,20 @@ private:
 
 private:
 
-    const cudf::table_view r;
-    const cudf::table_view s;
-    const cudf::column_view g1;
-    const cudf::column_view g2;
+    const cudf::table_view source_table;
+
+    const cudf::column_view gather_map;
+
     const int circular_buffer;
 
     using key_t = int32_t;
 
-    int r_cols = r.num_columns();
-    int s_cols = s.num_columns();
+    int cols = source_table.num_columns();
 
-    int nr;
-    int ns;
-    int n;
+    int n_match;
 
-    key_t* rkeys_partitions{nullptr};
-    key_t* skeys_partitions{nullptr};
-    void*  rvals_partitions{nullptr};
-    void*  svals_partitions{nullptr};
+    void*  keys_partitions{nullptr};
+    void*  vals_partitions{nullptr};
 
     int first_bit;
     int radix_bits;

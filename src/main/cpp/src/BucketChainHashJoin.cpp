@@ -111,21 +111,17 @@ JNIEXPORT jlongArray JNICALL Java_com_nvidia_spark_rapids_jni_BucketChainHashJoi
 }
 
 JNIEXPORT jlongArray JNICALL Java_com_nvidia_spark_rapids_jni_BucketChainHashJoin_gather(
-  JNIEnv* env, jclass, jlong j_input1, jlong j_input2, jlong j_map1, jlong j_map2, jboolean check_bounds)
+  JNIEnv* env, jclass, jlong j_input, jlong j_map, jboolean check_bounds)
 {
-  JNI_NULL_CHECK(env, j_input1, "input table is null", 0);
-  JNI_NULL_CHECK(env, j_map1, "map column is null", 0);
-  JNI_NULL_CHECK(env, j_input2, "input table is null", 0);
-  JNI_NULL_CHECK(env, j_map2, "map column is null", 0);
+  JNI_NULL_CHECK(env, j_input, "input table is null", 0);
+  JNI_NULL_CHECK(env, j_map, "map column is null", 0);
   try {
     cudf::jni::auto_set_device(env);
-    auto const input1 = reinterpret_cast<cudf::table_view const*>(j_input1);
-    auto const map1   = reinterpret_cast<cudf::column_view const*>(j_map1);
-    auto const input2 = reinterpret_cast<cudf::table_view const*>(j_input2);
-    auto const map2   = reinterpret_cast<cudf::column_view const*>(j_map2);
+    auto const input = reinterpret_cast<cudf::table_view const*>(j_input);
+    auto const map   = reinterpret_cast<cudf::column_view const*>(j_map);
     auto bounds_policy =
       check_bounds ? cudf::out_of_bounds_policy::NULLIFY : cudf::out_of_bounds_policy::DONT_CHECK;
-    return rapids::jni::convert_table_for_return(env, spark_rapids_jni::gather(*input1, *input2, *map1, *map2, bounds_policy), {});
+    return rapids::jni::convert_table_for_return(env, spark_rapids_jni::gather(*input, *map, bounds_policy), {});
   }
   CATCH_STD(env, 0);
 }

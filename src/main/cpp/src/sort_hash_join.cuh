@@ -51,9 +51,6 @@ public:
 
         allocate_mem(&d_n_matches);
 
-        //using s_biggest_col_t = typename TupleS::biggest_col_t;
-        //using r_biggest_col_t = typename TupleR::biggest_col_t;
-        // here I assume every col is of type int32_t
         allocate_mem(&r_offsets, false, sizeof(int)*n_partitions);
         allocate_mem(&s_offsets, false, sizeof(int)*n_partitions);
         allocate_mem(&r_work,    false, sizeof(uint64_t)*n_partitions*2);
@@ -72,12 +69,8 @@ public:
     }
 
     void test_column_factories() {
-        std::cout << "Hello I am here: " << std::endl;
         auto empty_col = cudf::make_empty_column(cudf::data_type{cudf::type_id::INT32});
-        std::cout << "Empty column size: " << empty_col->size() << std::endl;
-
         auto numeric_col = cudf::make_numeric_column(cudf::data_type{cudf::type_id::FLOAT64}, 1000);
-        std::cout << "Numeric column size: " << numeric_col->size() << std::endl;
     }
 
     void print_column_view(cudf::column_view const& col) {
@@ -102,8 +95,6 @@ public:
     }
 
     static std::unique_ptr<cudf::table> gatherTest() {
-        std::cout << "Hello I am in gatherTest: " << std::endl;
-
         // Create a column with 5 integers
         auto column = cudf::make_numeric_column(cudf::data_type(cudf::type_id::INT32), 5);
         auto mutable_view = column->mutable_view();
@@ -121,60 +112,20 @@ public:
     std::pair<std::unique_ptr<rmm::device_uvector<cudf::size_type>>,
               std::unique_ptr<rmm::device_uvector<cudf::size_type>>> join(rmm::cuda_stream_view stream,
                                 rmm::device_async_resource_ref mr){
-        std::cout << "hello I am 1." << std::endl;
         partition();
-        std::cout << "hello I am 1.2." << std::endl;
-        std::cout << "n_matches: " << n_matches << std::endl;
         join_copartitions();
         //TIME_FUNC_ACC(materialize_by_gather(), mat_time);
         std::cout << "n_matches: " << n_matches << std::endl;
         auto r_match_uvector = std::make_unique<rmm::device_uvector<cudf::size_type>>(n_matches, stream, mr);
         auto s_match_uvector = std::make_unique<rmm::device_uvector<cudf::size_type>>(n_matches, stream, mr);
 
-        std::cout << "hello I am 1.5." << std::endl;
-
         TIME_FUNC_ACC(copy_device_vector(r_match_uvector, s_match_uvector,
             r_match_idx, s_match_idx), copy_device_vector_time);
-        std::cout << "hello I am 2." << std::endl;
+
         // Return the pair of unique_ptrs to device_uvectors
         return std::make_pair(std::move(r_match_uvector), std::move(s_match_uvector));
 
     }
-
-    void materialize_by_gather() {
-        // 2 already transformed payload columns
-        // Alloc 0
-        // Peek mem = 4Mc
-        // Used after Exit 2Mc
-
-        // Materialize a not yet transformed payload column
-        // Mt + 2Mc allocated
-
-        // after a column has been materialized Mt + Mc to be freed.transformed
-        // Peek mem used = Mt + 4Mc
-
-       // partition each payload columns and then gather
-       /*
-       for_<r_cols-1>([&](auto i) {
-            using val_t = std::tuple_element_t<i.value+1, typename TupleR::value_type>;
-            if(i.value > 0) partition_pairs(COL(r, 0), COL(r, i.value+1), rkeys_partitions, (val_t*)rvals_partitions, nullptr, nr); // Mt + 2Mc is allocated.
-            thrust::device_ptr<val_t> dev_data_ptr((val_t*)rvals_partitions);
-            thrust::device_ptr<int> dev_idx_ptr(r_match_idx);
-            thrust::device_ptr<val_t> dev_out_ptr(COL(out, i.value+1));
-            thrust::gather(dev_idx_ptr, dev_idx_ptr+std::min(circular_buffer_size, n_matches), dev_data_ptr, dev_out_ptr);
-       });
-       for_<s_cols-1>([&](auto i) {
-            constexpr auto k = i.value+r_cols;
-            using val_t = std::tuple_element_t<i.value+1, typename TupleS::value_type>;
-            if(i.value > 0) partition_pairs(COL(s, 0), COL(s, i.value+1), skeys_partitions, (val_t*)svals_partitions, nullptr, ns);
-            thrust::device_ptr<val_t> dev_data_ptr((val_t*)svals_partitions);
-            thrust::device_ptr<int> dev_idx_ptr(s_match_idx);
-            thrust::device_ptr<val_t> dev_out_ptr(COL(out, k));
-            thrust::gather(dev_idx_ptr, dev_idx_ptr+std::min(circular_buffer_size, n_matches), dev_data_ptr, dev_out_ptr);
-       });
-       */
-    }
-
 
     ~SortHashJoin() {
         release_mem(d_n_matches);
@@ -217,10 +168,10 @@ private:
             // Handle error
         }
 
-        std::cout << "r_match_uvector->data(): " << r_match_uvector->data() << std::endl;
-        std::cout << "r_match_idx: " << r_match_idx << std::endl;
-        std::cout << "n_matches: " << n_matches << std::endl;
-        std::cout << "Copy size: " << (n_matches * sizeof(int)) << " bytes" << std::endl;
+//         std::cout << "r_match_uvector->data(): " << r_match_uvector->data() << std::endl;
+//         std::cout << "r_match_idx: " << r_match_idx << std::endl;
+//         std::cout << "n_matches: " << n_matches << std::endl;
+//         std::cout << "Copy size: " << (n_matches * sizeof(int)) << " bytes" << std::endl;
 
         cudaError_t cudaStatus = cudaMemcpy(r_match_uvector->data(), r_match_idx,
                                             n_matches * sizeof(int), cudaMemcpyDeviceToDevice);
@@ -250,7 +201,6 @@ private:
                         const int num_items) {
         // offsets array to store offsets for each partition
         // num_items: number of key-value pairs to partition
-        //
         SinglePassPartition<KeyT, ValueT, int> ssp(keys, values, keys_out, values_out, offsets, num_items, first_bit, radix_bits);
         ssp.process();
     }
@@ -283,36 +233,22 @@ private:
 
         key_t* rvals  {nullptr};
         key_t* svals  {nullptr};
-        std::cout << "hello I am 1.1.1" << std::endl;
         in_copy(&rkeys, r, 0);
         in_copy(&skeys, s, 0);
-        /*
-        key_t* cpuRKeys = new key_t[nr];
-        cudaMemcpy(cpuRKeys, rkeys, sizeof(key_t) * nr, cudaMemcpyDeviceToHost);
 
-        if (cpuRKeys != nullptr) {
-            for (int i = 0; i < nr; ++i) {
-                std::cout << "cpuRKeys[" << i << "] = " << cpuRKeys[i] << std::endl;
-            }
-        } else {
-            std::cout << "cpuRKeys is null" << std::endl;
-        }
-        */
-        std::cout << "hello I am 1.1.2" << std::endl;
         partition_pairs(rkeys, rvals,
                         rkeys_partitions, (key_t*)rvals_partitions,
                         r_offsets, nr);
-        std::cout << "hello I am 1.1.3" << std::endl;
+
         // Peek Mt + 2Mc
         partition_pairs(skeys, svals,
                         skeys_partitions, (key_t*)svals_partitions,
                         s_offsets, ns);
 
-        std::cout << "hello I am 1.1.4" << std::endl;
+
         generate_work_units<<<num_tb(n_partitions,512),512>>>(r_offsets, s_offsets, r_work, s_work, total_work, n_partitions, threshold);
         // Peek Mt + 4Mc
         // Used mem after exit = 4 Mc
-        std::cout << "hello I am 1.1.5" << std::endl;
 
         key_t* h_rkeys_partitions = new key_t[nr];;
         cudaMemcpy(h_rkeys_partitions, rkeys_partitions, sizeof(key_t)*nr, cudaMemcpyDeviceToHost);
