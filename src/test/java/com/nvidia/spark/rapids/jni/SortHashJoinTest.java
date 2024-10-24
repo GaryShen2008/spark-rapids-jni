@@ -12,10 +12,12 @@ public class SortHashJoinTest {
         Table.TestBuilder tb1 = new Table.TestBuilder();
         tb1.column(1, 9, 2, 3, 4, 3,99999);
         tb1.column(1, 9, 2, 3, 4, 3, 9);
+        tb1.column(10, 90, 2, 3, 4, 3, 9);
 
         Table.TestBuilder tb2 = new Table.TestBuilder();
         tb2.column(1, 9, 2, 3, 6, 8, 4, 12, 14, 19, 99999);
         tb2.column(1, 9, 2, 3, 6, 8, 777, 12, 14, 19, 9);
+        tb2.column(10, 90, 2, 3, 6, 8, 777, 12, 14, 19, 9);
 
         Table left = tb1.build();
         Table right = tb2.build();
