@@ -161,7 +161,7 @@ __global__ void join_copartitions_arr(const KeyT* R,
                                       const int*  n_work_units, // number of work units 
                                       const int   log_parts, // number of partitions in log2
                                       const int   max_bucket_size, // more like max. partition size
-                                      int*        results,
+                                      unsigned long long int*        results,
                                       ValT*       r_output,
                                       ValT*       s_output,
                                       const int   circular_buffer_size) {
@@ -296,7 +296,7 @@ __global__ void join_copartitions_arr(const KeyT* R,
                         }
 
                         if (lid == 0) {
-                            ptr = atomicAdd(results, SHUFFLE_SIZE);
+                            ptr = atomicAdd(results,  (unsigned long long int)SHUFFLE_SIZE);
                         }
 
                         ptr = __shfl_sync(__activemask(), ptr, 0);
@@ -329,7 +329,7 @@ __global__ void join_copartitions_arr(const KeyT* R,
     }
 
     if (lid == 0) {
-        ptr = atomicAdd(results, shuffle_ptr);
+        ptr = atomicAdd(results, (unsigned long long int)shuffle_ptr);
     }
 
     ptr = __shfl_sync(__activemask(), ptr, 0);

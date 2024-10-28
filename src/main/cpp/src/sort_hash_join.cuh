@@ -321,13 +321,13 @@ private:
 
     int nr;
     int ns;
-    int n_matches;
+    unsigned long long int n_matches;
     int circular_buffer_size;
     int first_bit;
     int n_partitions;
     int radix_bits;
 
-    int*   d_n_matches     {nullptr};
+    unsigned long long int*   d_n_matches     {nullptr};
     int*   r_offsets       {nullptr};
     int*   s_offsets       {nullptr};
     uint64_t* r_work       {nullptr};
