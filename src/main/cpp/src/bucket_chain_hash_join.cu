@@ -60,9 +60,9 @@ std::pair<std::unique_ptr<rmm::device_uvector<size_type>>,
               std::unique_ptr<rmm::device_uvector<size_type>>>
 inner_join(table_view const& left_input,
            table_view const& right_input,
-           null_equality compare_nulls,
-           rmm::cuda_stream_view stream,
-           rmm::device_async_resource_ref mr){
+           null_equality compare_nulls = null_equality::EQUAL,
+           rmm::cuda_stream_view stream = cudf::get_default_stream(),
+           rmm::device_async_resource_ref mr = cudf::get_current_device_resource_ref()){
     return detail::inner_join(left_input, right_input, compare_nulls, stream, mr);
 }
 
