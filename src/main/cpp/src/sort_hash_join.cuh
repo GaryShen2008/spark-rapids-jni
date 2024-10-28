@@ -163,7 +163,7 @@ private:
             // Handle error
         }
 
-        if (n_matches <= 0) {
+        if (n_matches < 0) {
             std::cerr << "Error: Invalid number of matches: " << n_matches << std::endl;
             // Handle error
         }
