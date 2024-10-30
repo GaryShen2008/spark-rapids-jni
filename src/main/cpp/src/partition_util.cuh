@@ -88,9 +88,10 @@ public:
     }
 
     ~SinglePassPartition() {
-        std::cout << "released." << std::endl;
-        TIME_FUNC_ACC(release_mem(d_temp_storage, temp_storage_bytes, stream, mr), test_Time4);
-        std::cout << "test_time4: " << test_Time4 << std::endl;
+        //std::cout << "released." << std::endl;
+        //TIME_FUNC_ACC(release_mem(d_temp_storage, temp_storage_bytes, stream, mr), test_Time4);
+        release_mem(d_temp_storage, temp_storage_bytes, stream, mr);
+        //std::cout << "test_time4: " << test_Time4 << std::endl;
         release_mem(d_counts_out, sizeof(int), stream, mr);
     }
 
@@ -109,7 +110,8 @@ public:
     void process() {
         // Reuse the radix sort to partition
        if(values == nullptr){
-            TIME_FUNC_ACC(cub::DeviceRadixSort::SortKeys(d_temp_storage, temp_storage_bytes, keys, keys_out, N, begin_bit, end_bit), test_Time);
+            //TIME_FUNC_ACC(cub::DeviceRadixSort::SortKeys(d_temp_storage, temp_storage_bytes, keys, keys_out, N, begin_bit, end_bit), test_Time);
+            cub::DeviceRadixSort::SortKeys(d_temp_storage, temp_storage_bytes, keys, keys_out, N, begin_bit, end_bit);
 //             key_t* h_rkeys_partitions = new key_t[N];;
 //             cudaMemcpy(h_rkeys_partitions, keys_out, sizeof(key_t)*N, cudaMemcpyDeviceToHost);
 //             for (long i = 0; i < N; ++i) {
@@ -118,7 +120,7 @@ public:
 //
 //             std::cout << std::endl;
 //             delete[] h_rkeys_partitions;
-            std::cout << "test_time: " << test_Time << std::endl;
+            //std::cout << "test_time: " << test_Time << std::endl;
         }
         else {
             cub::DeviceRadixSort::SortPairs(d_temp_storage, temp_storage_bytes, keys, keys_out, values, values_out, N, begin_bit, end_bit);
@@ -148,7 +150,7 @@ public:
 
     void test(){
         if(offsets) {
-            std::cout << "offsets" << std::endl;
+            //std::cout << "offsets" << std::endl;
             RadixExtractor<key_t> conversion_op(begin_bit, end_bit);
             cub::TransformInputIterator<key_t, RadixExtractor<key_t>, key_t*> itr(keys_out, conversion_op);
 
@@ -167,13 +169,15 @@ public:
     }
 
     void reassign_temp(size_t tmp_){
-       std::cout << "temp size:" << tmp_ << std::endl;
-       std::cout << "temp_storage_bytes:" << temp_storage_bytes << std::endl;
+       //std::cout << "temp size:" << tmp_ << std::endl;
+       //std::cout << "temp_storage_bytes:" << temp_storage_bytes << std::endl;
        if(tmp_ > temp_storage_bytes) {
-            TIME_FUNC_ACC(release_mem(d_temp_storage, temp_storage_bytes, stream, mr), test_Time2);
-            std::cout << "test_time2: " << test_Time2 << std::endl;
-           TIME_FUNC_ACC(allocate_mem(&d_temp_storage, false, tmp_, stream, mr), test_Time3);
-           std::cout << "test_time3: " << test_Time3 << std::endl;
+            //TIME_FUNC_ACC(release_mem(d_temp_storage, temp_storage_bytes, stream, mr), test_Time2);
+           release_mem(d_temp_storage, temp_storage_bytes, stream, mr);
+           // std::cout << "test_time2: " << test_Time2 << std::endl;
+           //TIME_FUNC_ACC(allocate_mem(&d_temp_storage, false, tmp_, stream, mr), test_Time3);
+           allocate_mem(&d_temp_storage, false, tmp_, stream, mr);
+           //std::cout << "test_time3: " << test_Time3 << std::endl;
            temp_storage_bytes = tmp_;
         }
     }

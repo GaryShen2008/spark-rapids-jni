@@ -117,14 +117,17 @@ public:
               std::unique_ptr<rmm::device_uvector<cudf::size_type>>> join(rmm::cuda_stream_view stream,
                                 rmm::device_async_resource_ref mr){
         partition();
-        TIME_FUNC_ACC(join_copartitions(), join_time);
+        //TIME_FUNC_ACC(join_copartitions(), join_time);
+        join_copartitions();
         //TIME_FUNC_ACC(materialize_by_gather(), mat_time);
         //std::cout << "n_matches: " << n_matches << std::endl;
         auto r_match_uvector = std::make_unique<rmm::device_uvector<cudf::size_type>>(n_matches, stream, mr);
         auto s_match_uvector = std::make_unique<rmm::device_uvector<cudf::size_type>>(n_matches, stream, mr);
 
-        TIME_FUNC_ACC(copy_device_vector(r_match_uvector, s_match_uvector,
-            r_match_idx, s_match_idx), copy_device_vector_time);
+        //TIME_FUNC_ACC(copy_device_vector(r_match_uvector, s_match_uvector,
+            //r_match_idx, s_match_idx), copy_device_vector_time);
+        copy_device_vector(r_match_uvector, s_match_uvector,
+                        r_match_idx, s_match_idx);
 
         // Return the pair of unique_ptrs to device_uvectors
         return std::make_pair(std::move(r_match_uvector), std::move(s_match_uvector));
@@ -210,12 +213,13 @@ private:
         // offsets array to store offsets for each partition
         // num_items: number of key-value pairs to partition
         SinglePassPartition<KeyT, ValueT, int> ssp(keys, values, keys_out, values_out, offsets, num_items, first_bit, radix_bits, stream, mr);
-        if(partition_process_time1 == 0){
-            TIME_FUNC_ACC(ssp.process(), partition_process_time1);
-        }
-        else{
-            TIME_FUNC_ACC(ssp.process(), partition_process_time2);
-        }
+//         if(partition_process_time1 == 0){
+//             TIME_FUNC_ACC(ssp.process(), partition_process_time1);
+//         }
+//         else{
+//             TIME_FUNC_ACC(ssp.process(), partition_process_time2);
+//         }
+        ssp.process();
     }
 
     void in_copy(key_t** arr, cudf::table_view table, int index){
@@ -251,14 +255,19 @@ private:
         in_copy(&rvals, r, 0);
         in_copy(&svals, s, 0);
 
-        TIME_FUNC_ACC(partition_pairs(skeys, svals,
-                        skeys_partitions, (key_t*)svals_partitions,
-                        s_offsets, ns), partition_pair2);
+//         TIME_FUNC_ACC(partition_pairs(skeys, svals,
+//                         skeys_partitions, (key_t*)svals_partitions,
+//                         s_offsets, ns), partition_pair2);
+        partition_pairs(skeys, svals,
+                                skeys_partitions, (key_t*)svals_partitions,
+                                s_offsets, ns);
 
-        TIME_FUNC_ACC(partition_pairs(rkeys, rvals,
-                        rkeys_partitions, (key_t*)rvals_partitions,
-                        r_offsets, nr), partition_pair1);
-
+//         TIME_FUNC_ACC(partition_pairs(rkeys, rvals,
+//                         rkeys_partitions, (key_t*)rvals_partitions,
+//                         r_offsets, nr), partition_pair1);
+        partition_pairs(rkeys, rvals,
+                                rkeys_partitions, (key_t*)rvals_partitions,
+                                r_offsets, nr);
         // Peek Mt + 2Mc
 
 

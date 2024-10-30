@@ -36,13 +36,13 @@ inner_join(table_view const& left_input,
     int circular_buffer_size = std::max(num_r, num_s);
     SortHashJoin shj(left_input, right_input, 0, 15, circular_buffer_size, stream, mr);
     auto result = shj.join(stream, mr);
-    std::cout << "partition time: " << shj.partition_time << std::endl;
-    std::cout << "join time: "<< shj.join_time << std::endl;
-    std::cout << "copy_device_vector_time: "<< shj.copy_device_vector_time << std::endl;
-    std::cout << "partition_pair1 time: "<< shj.partition_pair1 << std::endl;
-    std::cout << "partition_pair2 time: "<< shj.partition_pair2 << std::endl;
-    std::cout << "partition_process1 time: "<< shj.partition_process_time1 << std::endl;
-    std::cout << "partition_process2 time: "<< shj.partition_process_time2 << std::endl;
+//     std::cout << "partition time: " << shj.partition_time << std::endl;
+//     std::cout << "join time: "<< shj.join_time << std::endl;
+//     std::cout << "copy_device_vector_time: "<< shj.copy_device_vector_time << std::endl;
+//     std::cout << "partition_pair1 time: "<< shj.partition_pair1 << std::endl;
+//     std::cout << "partition_pair2 time: "<< shj.partition_pair2 << std::endl;
+//     std::cout << "partition_process1 time: "<< shj.partition_process_time1 << std::endl;
+//     std::cout << "partition_process2 time: "<< shj.partition_process_time2 << std::endl;
 
     return result;
 }
