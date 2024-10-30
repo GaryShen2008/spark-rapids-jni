@@ -11,6 +11,8 @@
 #include <cudf/table/table.hpp>
 #include <cudf/filling.hpp>
 
+#include <rmm/resource_ref.hpp>
+#include <rmm/cuda_stream_view.hpp>
 #include <rmm/device_buffer.hpp>
 #include <rmm/device_vector.hpp>
 #include <thrust/device_vector.h>
@@ -29,6 +31,8 @@
 
 #include <thrust/gather.h>
 
+
+
 class SortHashGather {
 
 public:
@@ -36,13 +40,15 @@ public:
     // int first_bit: Likely used in the hash function.
     // int radix_bits: Used to determine the number of partitions.
     // int circular_buffer_size: Size of a circular buffer used in the join operation.
-    explicit SortHashGather(cudf::table_view source_table, cudf::column_view gather_map, int n_match, int circular_buffer_size, int first_bit,  int radix_bits)
+    explicit SortHashGather(cudf::table_view source_table, cudf::column_view gather_map, int n_match, int circular_buffer_size, int first_bit,  int radix_bits, rmm::cuda_stream_view stream, rmm::device_async_resource_ref mr)
     : source_table(source_table)
     , gather_map(gather_map)
     , n_match(n_match)
     , circular_buffer(circular_buffer_size)
     , first_bit(first_bit)
     , radix_bits(radix_bits)
+    , stream(stream)
+    , mr(mr)
     {
 
         allocate_mem(&keys_partitions, false, sizeof(key_t)*(circular_buffer+2048));  // 1 Mc used, memory used now.
@@ -168,7 +174,7 @@ private:
         // offsets array to store offsets for each partition
         // num_items: number of key-value pairs to partition
 
-        SinglePassPartition<KeyT, ValueT, int> ssp(keys, values, keys_out, values_out, offsets, num_items, first_bit, radix_bits);
+        SinglePassPartition<KeyT, ValueT, int> ssp(keys, values, keys_out, values_out, offsets, num_items, first_bit, radix_bits, stream, mr);
         ssp.process();
     }
 
@@ -191,6 +197,9 @@ private:
 
     int first_bit;
     int radix_bits;
+
+    rmm::cuda_stream_view stream;
+    rmm::device_async_resource_ref mr;
 
     cudaEvent_t start;
     cudaEvent_t stop;

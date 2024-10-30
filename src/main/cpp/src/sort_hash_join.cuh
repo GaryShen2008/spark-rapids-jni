@@ -11,6 +11,8 @@
 #include <cudf/table/table.hpp>
 #include <cudf/filling.hpp>
 
+#include <rmm/resource_ref.hpp>
+#include <rmm/cuda_stream_view.hpp>
 #include <rmm/device_buffer.hpp>
 #include <rmm/device_vector.hpp>
 #include <thrust/device_vector.h>
@@ -34,12 +36,14 @@ public:
     // int first_bit: Likely used in the hash function.
     // int radix_bits: Used to determine the number of partitions.
     // int circular_buffer_size: Size of a circular buffer used in the join operation.
-    explicit SortHashJoin(cudf::table_view r_in, cudf::table_view s_in, int first_bit,  int radix_bits, int circular_buffer_size)
+    explicit SortHashJoin(cudf::table_view r_in, cudf::table_view s_in, int first_bit,  int radix_bits, int circular_buffer_size, rmm::cuda_stream_view stream, rmm::device_async_resource_ref mr)
     : r(r_in)
     , s(s_in)
     , first_bit(first_bit)
     , circular_buffer_size(circular_buffer_size)
     , radix_bits(radix_bits)
+    , stream(stream)
+    , mr(mr)
     {
         nr = static_cast<int>(r.num_rows());
         ns = static_cast<int>(s.num_rows());
@@ -49,20 +53,20 @@ public:
 
         //out.allocate(circular_buffer_size);
 
-        allocate_mem(&d_n_matches);
+        allocate_mem(&d_n_matches, true, sizeof(unsigned long long int), stream, mr);
 
-        allocate_mem(&r_offsets, false, sizeof(int)*n_partitions);
-        allocate_mem(&s_offsets, false, sizeof(int)*n_partitions);
-        allocate_mem(&r_work,    false, sizeof(uint64_t)*n_partitions*2);
-        allocate_mem(&s_work,    false, sizeof(uint64_t)*n_partitions*2);
-        allocate_mem(&rkeys_partitions, false, sizeof(key_t)*(nr+2048));  // 1 Mc used, memory used now.
-        allocate_mem(&skeys_partitions, false, sizeof(key_t)*(ns+2048));  // 2 Mc used, memory used now.
-        allocate_mem(&rvals_partitions, false, sizeof(int32_t)*(nr+2048)); // 3 Mc used, memory used now.
-        allocate_mem(&svals_partitions, false, sizeof(int32_t)*(ns+2048)); // 4 Mc used, memory used now.
-        allocate_mem(&total_work); // initialized to zero
+        allocate_mem(&r_offsets, false, sizeof(int)*n_partitions, stream, mr);
+        allocate_mem(&s_offsets, false, sizeof(int)*n_partitions, stream, mr);
+        allocate_mem(&r_work,    false, sizeof(uint64_t)*n_partitions*2, stream, mr);
+        allocate_mem(&s_work,    false, sizeof(uint64_t)*n_partitions*2, stream, mr);
+        allocate_mem(&rkeys_partitions, false, sizeof(key_t)*(nr+2048), stream, mr);  // 1 Mc used, memory used now.
+        allocate_mem(&skeys_partitions, false, sizeof(key_t)*(ns+2048), stream, mr);  // 2 Mc used, memory used now.
+        allocate_mem(&rvals_partitions, false, sizeof(int32_t)*(nr+2048), stream, mr); // 3 Mc used, memory used now.
+        allocate_mem(&svals_partitions, false, sizeof(int32_t)*(ns+2048), stream, mr); // 4 Mc used, memory used now.
+        allocate_mem(&total_work, true, sizeof(int), stream, mr); // initialized to zero
 
-        allocate_mem(&r_match_idx, false, sizeof(int)*circular_buffer_size); // 5 Mc used
-        allocate_mem(&s_match_idx, false, sizeof(int)*circular_buffer_size); // 6 Mc Used
+        allocate_mem(&r_match_idx, false, sizeof(int)*circular_buffer_size, stream, mr); // 5 Mc used
+        allocate_mem(&s_match_idx, false, sizeof(int)*circular_buffer_size, stream, mr); // 6 Mc Used
 
         cudaEventCreate(&start);
         cudaEventCreate(&stop);
@@ -113,7 +117,7 @@ public:
               std::unique_ptr<rmm::device_uvector<cudf::size_type>>> join(rmm::cuda_stream_view stream,
                                 rmm::device_async_resource_ref mr){
         partition();
-        join_copartitions();
+        TIME_FUNC_ACC(join_copartitions(), join_time);
         //TIME_FUNC_ACC(materialize_by_gather(), mat_time);
         //std::cout << "n_matches: " << n_matches << std::endl;
         auto r_match_uvector = std::make_unique<rmm::device_uvector<cudf::size_type>>(n_matches, stream, mr);
@@ -128,19 +132,19 @@ public:
     }
 
     ~SortHashJoin() {
-        release_mem(d_n_matches);
-        release_mem(r_offsets);
-        release_mem(s_offsets);
-        release_mem(rkeys_partitions);
-        release_mem(skeys_partitions);
-        release_mem(rvals_partitions);
-        release_mem(svals_partitions);
-        release_mem(r_work);
-        release_mem(s_work);
-        release_mem(total_work);
+        release_mem(d_n_matches, sizeof(unsigned long long int), stream, mr);
+        release_mem(r_offsets, sizeof(int) * n_partitions, stream, mr);
+        release_mem(s_offsets, sizeof(int) * n_partitions, stream, mr);
+        release_mem(r_work, sizeof(uint64_t)*n_partitions*2, stream, mr);
+        release_mem(s_work, sizeof(uint64_t)*n_partitions*2, stream, mr);
+        release_mem(rkeys_partitions, sizeof(key_t)*(nr+2048), stream, mr);
+        release_mem(skeys_partitions, sizeof(key_t)*(ns+2048), stream, mr);
+        release_mem(rvals_partitions, sizeof(key_t)*(nr+2048), stream, mr);
+        release_mem(svals_partitions, sizeof(key_t)*(ns+2048), stream, mr);
+        release_mem(total_work, sizeof(int), stream, mr);
 
-        release_mem(r_match_idx);
-        release_mem(s_match_idx);
+        release_mem(r_match_idx, sizeof(int)*circular_buffer_size, stream, mr);
+        release_mem(s_match_idx, sizeof(int)*circular_buffer_size,stream, mr);
 
         cudaEventDestroy(start);
         cudaEventDestroy(stop);
@@ -148,9 +152,13 @@ public:
 
 public:
     float partition_time {0};
+    float partition_process_time1 {0};
+    float partition_process_time2 {0};
     float join_time {0};
     float mat_time {0};
     float copy_device_vector_time{0};
+    float partition_pair1 {0};
+    float partition_pair2 {0};
 
 private:
 
@@ -201,8 +209,13 @@ private:
                         const int num_items) {
         // offsets array to store offsets for each partition
         // num_items: number of key-value pairs to partition
-        SinglePassPartition<KeyT, ValueT, int> ssp(keys, values, keys_out, values_out, offsets, num_items, first_bit, radix_bits);
-        ssp.process();
+        SinglePassPartition<KeyT, ValueT, int> ssp(keys, values, keys_out, values_out, offsets, num_items, first_bit, radix_bits, stream, mr);
+        if(partition_process_time1 == 0){
+            TIME_FUNC_ACC(ssp.process(), partition_process_time1);
+        }
+        else{
+            TIME_FUNC_ACC(ssp.process(), partition_process_time2);
+        }
     }
 
     void in_copy(key_t** arr, cudf::table_view table, int index){
@@ -235,15 +248,19 @@ private:
         key_t* svals  {nullptr};
         in_copy(&rkeys, r, 0);
         in_copy(&skeys, s, 0);
+        in_copy(&rvals, r, 0);
+        in_copy(&svals, s, 0);
 
-        partition_pairs(rkeys, rvals,
+        TIME_FUNC_ACC(partition_pairs(skeys, svals,
+                        skeys_partitions, (key_t*)svals_partitions,
+                        s_offsets, ns), partition_pair2);
+
+        TIME_FUNC_ACC(partition_pairs(rkeys, rvals,
                         rkeys_partitions, (key_t*)rvals_partitions,
-                        r_offsets, nr);
+                        r_offsets, nr), partition_pair1);
 
         // Peek Mt + 2Mc
-        partition_pairs(skeys, svals,
-                        skeys_partitions, (key_t*)svals_partitions,
-                        s_offsets, ns);
+
 
 
         generate_work_units<<<num_tb(n_partitions,512),512>>>(r_offsets, s_offsets, r_work, s_work, total_work, n_partitions, threshold);
@@ -299,8 +316,10 @@ private:
     const cudf::table_view r;
     const cudf::table_view s;
 
-    using key_t = int32_t;
+    rmm::cuda_stream_view stream;
+    rmm::device_async_resource_ref mr;
 
+    using key_t = int32_t;
 
     int r_cols = r.num_columns();
     int s_cols = s.num_columns();

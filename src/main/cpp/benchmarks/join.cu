@@ -15,7 +15,7 @@
  */
 
 #include <join/join_common.hpp>
-#include "bucket_chain_hash_join.cu"
+#include "bucket_chain_hash_join.hpp"
 
 template <typename Key, bool Nullable>
 void nvbench_inner_join(nvbench::state& state,

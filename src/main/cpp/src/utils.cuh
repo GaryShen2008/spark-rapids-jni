@@ -4,10 +4,12 @@
 #include <cub/cub.cuh> 
 #include <iostream>
 #include <rmm/cuda_stream.hpp>
+#include <rmm/cuda_stream_view.hpp>
 #include <rmm/device_buffer.hpp>
 #include <rmm/device_scalar.hpp>
 #include <rmm/device_uvector.hpp>
 #include <rmm/mr/device/per_device_resource.hpp>
+#include <rmm/resource_ref.hpp>
 
 #include "mem_manager.hpp"
 
@@ -82,9 +84,14 @@ void checkLast(const char* const file, const int line)
 */}
 
 inline void alloc_by_cuda(void** ptr, bool clear, size_t sz, cudaStream_t stream) {
-
     auto mr = rmm::mr::get_current_device_resource();
     *ptr = mr->allocate(sz, stream);
+    //CHECK_CUDA_ERROR(cudaMallocAsync(ptr, sz, stream));
+    if(clear) CHECK_CUDA_ERROR(cudaMemsetAsync(*ptr, 0, sz, stream));
+}
+
+inline void alloc_by_cuda(void** ptr, bool clear, size_t sz, rmm::cuda_stream_view stream, rmm::device_async_resource_ref mr){
+    *ptr = mr.allocate_async(sz, stream);
     //CHECK_CUDA_ERROR(cudaMallocAsync(ptr, sz, stream));
     if(clear) CHECK_CUDA_ERROR(cudaMemsetAsync(*ptr, 0, sz, stream));
 }
@@ -93,7 +100,6 @@ inline size_t get_cuda_free_mem() {
     size_t free = 0, total = 0;
     cudaMemGetInfo(&free, &total);
     std::cout << free << std::endl;
-
     return free;
 }
 
@@ -116,9 +122,18 @@ inline void free_rmm_mempool(void* ptr, cudaStream_t stream) {
 template<typename T>
 inline void allocate_mem(T** ptr, bool clear = true, size_t sz = sizeof(T), cudaStream_t stream = 0) {
     assert(ptr != nullptr);
-
 #ifdef USE_CUDA_MEMALLOC
     alloc_by_cuda((void**)ptr, clear, sz, stream);
+#else
+    alloc_by_rmm_mempool((void**)ptr, clear, sz, stream);
+#endif
+}
+
+template<typename T>
+inline void allocate_mem(T** ptr, bool clear, size_t sz, rmm::cuda_stream_view stream, rmm::device_async_resource_ref mr) {
+    assert(ptr != nullptr);
+#ifdef USE_CUDA_MEMALLOC
+    alloc_by_cuda((void**)ptr, clear, sz, stream, mr);
 #else
     alloc_by_rmm_mempool((void**)ptr, clear, sz, stream);
 #endif
@@ -128,6 +143,15 @@ template<typename T>
 inline void release_mem(T* ptr, cudaStream_t stream = 0) {
 #ifdef USE_CUDA_MEMALLOC
     CHECK_CUDA_ERROR(cudaFreeAsync(ptr, stream));
+#else
+    free_rmm_mempool((void*)ptr, stream);
+#endif
+}
+
+template<typename T>
+inline void release_mem(T* ptr, size_t sz, rmm::cuda_stream_view stream, rmm::device_async_resource_ref mr) {
+#ifdef USE_CUDA_MEMALLOC
+    mr.deallocate_async(ptr, sz, stream);
 #else
     free_rmm_mempool((void*)ptr, stream);
 #endif

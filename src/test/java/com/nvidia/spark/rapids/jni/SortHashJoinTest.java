@@ -10,7 +10,7 @@ public class SortHashJoinTest {
     @Test
     void testSortHashJoin() {
         Table.TestBuilder tb1 = new Table.TestBuilder();
-        tb1.column(1, 9, 2, 3, 4, 3,99999);
+        tb1.column(1, 9, 2, 3, 4, 5, 9999);
         tb1.column(1, 9, 2, 3, 4, 3, 9);
         tb1.column(10, 90, 2, 3, 4, 3, 9);
 
