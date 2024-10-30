@@ -44,7 +44,7 @@
 using JOIN_KEY_TYPE_RANGE = nvbench::type_list<nvbench::int32_t>;
 using JOIN_NULLABLE_RANGE = nvbench::enum_type_list<false, true>;
 
-auto const JOIN_SIZE_RANGE = std::vector<nvbench::int64_t>{100'000, 10'000'000, 10'000'000};
+auto const JOIN_SIZE_RANGE = std::vector<nvbench::int64_t>{100'000, 10'000'000, 20'000'000};
 
 struct null75_generator {
   thrust::minstd_rand engine;
