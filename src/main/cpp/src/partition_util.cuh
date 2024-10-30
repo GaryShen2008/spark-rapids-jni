@@ -4,9 +4,13 @@
 #include <stdio.h>
 #include <string>
 #include <type_traits>
+#include "utils.cuh"
 
 #include <cuda.h>
-#include <cub/cub.cuh> 
+#include <cub/cub.cuh>
+
+#include <rmm/resource_ref.hpp>
+#include <rmm/cuda_stream_view.hpp>
 
 __global__ void generate_work_units(const int* __restrict__  r_offsets, 
                                     const int* __restrict__  s_offsets, 
@@ -45,7 +49,9 @@ public:
                         off_t* offsets,
                         const long N, 
                         const int first_bit,
-                        const int radix_bits)
+                        const int radix_bits,
+                        rmm::cuda_stream_view stream,
+                        rmm::device_async_resource_ref mr)
     : keys(keys)
     , values(values)
     , keys_out(keys_out)
@@ -55,11 +61,13 @@ public:
     , begin_bit(first_bit)
     , end_bit(begin_bit+radix_bits)
     , radix_bits(radix_bits)
-    , n_partitions(1 << radix_bits) 
+    , n_partitions(1 << radix_bits)
+    , stream(stream)
+    , mr(mr)
     {
         assert(end_bit <= sizeof(key_t)*8);
 
-        allocate_mem(&d_counts_out, false, sizeof(int)*(n_partitions));
+        allocate_mem(&d_counts_out, false, sizeof(int)*(n_partitions), stream, mr);
         if(values == nullptr){
             cub::DeviceRadixSort::SortKeys(d_temp_storage, temp_storage_bytes, keys, keys_out, N, begin_bit, end_bit);
 //             key_t* h_rkeys_partitions = new key_t[N];;
@@ -74,12 +82,16 @@ public:
         else {
             cub::DeviceRadixSort::SortPairs(d_temp_storage, temp_storage_bytes, keys, keys_out, values, values_out, N, begin_bit, end_bit);
         }
-        allocate_mem(&d_temp_storage, false, temp_storage_bytes);
+        allocate_mem(&d_temp_storage, false, temp_storage_bytes, stream, mr);
+        cudaEventCreate(&start);
+        cudaEventCreate(&stop);
     }
 
     ~SinglePassPartition() {
-        release_mem(d_temp_storage);
-        release_mem(d_counts_out);
+        std::cout << "released." << std::endl;
+        TIME_FUNC_ACC(release_mem(d_temp_storage, temp_storage_bytes, stream, mr), test_Time4);
+        std::cout << "test_time4: " << test_Time4 << std::endl;
+        release_mem(d_counts_out, sizeof(int), stream, mr);
     }
 
     template<typename T>
@@ -97,7 +109,7 @@ public:
     void process() {
         // Reuse the radix sort to partition
        if(values == nullptr){
-            cub::DeviceRadixSort::SortKeys(d_temp_storage, temp_storage_bytes, keys, keys_out, N, begin_bit, end_bit);
+            TIME_FUNC_ACC(cub::DeviceRadixSort::SortKeys(d_temp_storage, temp_storage_bytes, keys, keys_out, N, begin_bit, end_bit), test_Time);
 //             key_t* h_rkeys_partitions = new key_t[N];;
 //             cudaMemcpy(h_rkeys_partitions, keys_out, sizeof(key_t)*N, cudaMemcpyDeviceToHost);
 //             for (long i = 0; i < N; ++i) {
@@ -106,29 +118,73 @@ public:
 //
 //             std::cout << std::endl;
 //             delete[] h_rkeys_partitions;
+            std::cout << "test_time: " << test_Time << std::endl;
         }
         else {
             cub::DeviceRadixSort::SortPairs(d_temp_storage, temp_storage_bytes, keys, keys_out, values, values_out, N, begin_bit, end_bit);
         }
         // Compute the offsets
+//         if(offsets) {
+//             std::cout << "offsets" << std::endl;
+//             RadixExtractor<key_t> conversion_op(begin_bit, end_bit);
+//             cub::TransformInputIterator<key_t, RadixExtractor<key_t>, key_t*> itr(keys_out, conversion_op);
+//
+//             size_t temp = 0;
+//             cub::DeviceHistogram::HistogramEven(nullptr, temp, itr, d_counts_out, n_partitions+1, 0, n_partitions, N);
+//             if(temp > temp_storage_bytes) {
+//                 release_mem(d_temp_storage);
+//                 allocate_mem(&d_temp_storage, false, temp);
+//                 temp_storage_bytes = temp;
+//             }
+//             cub::DeviceHistogram::HistogramEven(d_temp_storage, temp_storage_bytes, itr, d_counts_out, n_partitions+1, 0, n_partitions, N);
+//             // offsets = [23, 41, 66, 85, 100] in what n th partition we have how many data falling in?
+//             cub::DeviceScan::InclusiveSum(d_temp_storage, temp_storage_bytes, d_counts_out, offsets, n_partitions);
+//         }
+
+           test();
+//         std::cout << "test_time2: " << test_Time2 << std::endl;
+
+    }
+
+    void test(){
         if(offsets) {
+            std::cout << "offsets" << std::endl;
             RadixExtractor<key_t> conversion_op(begin_bit, end_bit);
             cub::TransformInputIterator<key_t, RadixExtractor<key_t>, key_t*> itr(keys_out, conversion_op);
-            
+
             size_t temp = 0;
             cub::DeviceHistogram::HistogramEven(nullptr, temp, itr, d_counts_out, n_partitions+1, 0, n_partitions, N);
-            if(temp > temp_storage_bytes) {
-                release_mem(d_temp_storage);
-                allocate_mem(&d_temp_storage, false, temp);
-                temp_storage_bytes = temp;
-            }
+
+            reassign_temp(temp);
+
             cub::DeviceHistogram::HistogramEven(d_temp_storage, temp_storage_bytes, itr, d_counts_out, n_partitions+1, 0, n_partitions, N);
+
             // offsets = [23, 41, 66, 85, 100] in what n th partition we have how many data falling in?
             cub::DeviceScan::InclusiveSum(d_temp_storage, temp_storage_bytes, d_counts_out, offsets, n_partitions);
+
+        }
+
+    }
+
+    void reassign_temp(size_t tmp_){
+       std::cout << "temp size:" << tmp_ << std::endl;
+       std::cout << "temp_storage_bytes:" << temp_storage_bytes << std::endl;
+       if(tmp_ > temp_storage_bytes) {
+            TIME_FUNC_ACC(release_mem(d_temp_storage, temp_storage_bytes, stream, mr), test_Time2);
+            std::cout << "test_time2: " << test_Time2 << std::endl;
+           TIME_FUNC_ACC(allocate_mem(&d_temp_storage, false, tmp_, stream, mr), test_Time3);
+           std::cout << "test_time3: " << test_Time3 << std::endl;
+           temp_storage_bytes = tmp_;
         }
     }
 
 private:
+    cudaEvent_t start;
+    cudaEvent_t stop;
+    float test_Time {0};
+    float test_Time2 {0};
+    float test_Time3 {0};
+    float test_Time4 {0};
     const int n_partitions;
     const key_t* keys; 
     const value_t* values; 
@@ -141,6 +197,9 @@ private:
     int radix_bits;
     void* d_temp_storage {nullptr};
     size_t temp_storage_bytes {0};
+
+    rmm::cuda_stream_view stream;
+    rmm::device_async_resource_ref mr;
 
     int*  d_counts_out {nullptr};
 };
