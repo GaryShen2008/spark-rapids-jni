@@ -84,9 +84,7 @@ void checkLast(const char* const file, const int line)
 */}
 
 inline void alloc_by_cuda(void** ptr, bool clear, size_t sz, cudaStream_t stream) {
-    auto mr = rmm::mr::get_current_device_resource();
-    *ptr = mr->allocate(sz, stream);
-    //CHECK_CUDA_ERROR(cudaMallocAsync(ptr, sz, stream));
+    CHECK_CUDA_ERROR(cudaMallocAsync(ptr, sz, stream));
     if(clear) CHECK_CUDA_ERROR(cudaMemsetAsync(*ptr, 0, sz, stream));
 }
 

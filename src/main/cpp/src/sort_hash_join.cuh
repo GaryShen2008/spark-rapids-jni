@@ -33,8 +33,8 @@ class SortHashJoin {
 
 public:
     // views of two tables to be joined
-    // int first_bit: Likely used in the hash function.
-    // int radix_bits: Used to determine the number of partitions.
+    // int first_bit: the first bit of key used for partition.
+    // int radix_bits: Used to determine the number of partitions, and the end bit.
     // int circular_buffer_size: Size of a circular buffer used in the join operation.
     explicit SortHashJoin(cudf::table_view r_in, cudf::table_view s_in, int first_bit,  int radix_bits, int circular_buffer_size, rmm::cuda_stream_view stream, rmm::device_async_resource_ref mr)
     : r(r_in)
@@ -116,9 +116,10 @@ public:
     std::pair<std::unique_ptr<rmm::device_uvector<cudf::size_type>>,
               std::unique_ptr<rmm::device_uvector<cudf::size_type>>> join(rmm::cuda_stream_view stream,
                                 rmm::device_async_resource_ref mr){
-        partition();
-        //TIME_FUNC_ACC(join_copartitions(), join_time);
-        join_copartitions();
+//         TIME_FUNC_ACC(partition(), partition_time);
+//         //partition();
+//         TIME_FUNC_ACC(join_copartitions(), join_time);
+        //join_copartitions();
         //TIME_FUNC_ACC(materialize_by_gather(), mat_time);
         //std::cout << "n_matches: " << n_matches << std::endl;
         auto r_match_uvector = std::make_unique<rmm::device_uvector<cudf::size_type>>(n_matches, stream, mr);
@@ -126,8 +127,8 @@ public:
 
         //TIME_FUNC_ACC(copy_device_vector(r_match_uvector, s_match_uvector,
             //r_match_idx, s_match_idx), copy_device_vector_time);
-        copy_device_vector(r_match_uvector, s_match_uvector,
-                        r_match_idx, s_match_idx);
+//         copy_device_vector(r_match_uvector, s_match_uvector,
+//                         r_match_idx, s_match_idx);
 
         // Return the pair of unique_ptrs to device_uvectors
         return std::make_pair(std::move(r_match_uvector), std::move(s_match_uvector));
@@ -212,14 +213,15 @@ private:
                         const int num_items) {
         // offsets array to store offsets for each partition
         // num_items: number of key-value pairs to partition
+        SETUP_TIMING();
         SinglePassPartition<KeyT, ValueT, int> ssp(keys, values, keys_out, values_out, offsets, num_items, first_bit, radix_bits, stream, mr);
-//         if(partition_process_time1 == 0){
-//             TIME_FUNC_ACC(ssp.process(), partition_process_time1);
-//         }
-//         else{
-//             TIME_FUNC_ACC(ssp.process(), partition_process_time2);
-//         }
-        ssp.process();
+        if(partition_process_time1 == 0){
+            TIME_FUNC_ACC(ssp.process(), partition_process_time1);
+        }
+        else{
+            TIME_FUNC_ACC(ssp.process(), partition_process_time2);
+        }
+        //ssp.process();
     }
 
     void in_copy(key_t** arr, cudf::table_view table, int index){
@@ -349,7 +351,7 @@ private:
 
     int nr;
     int ns;
-    unsigned long long int n_matches;
+    unsigned long long int n_matches = 2;
     int circular_buffer_size;
     int first_bit;
     int n_partitions;
