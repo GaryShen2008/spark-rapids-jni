@@ -59,14 +59,14 @@ public:
         allocate_mem(&s_offsets, false, sizeof(int)*n_partitions, stream, mr);
         allocate_mem(&r_work,    false, sizeof(uint64_t)*n_partitions*2, stream, mr);
         allocate_mem(&s_work,    false, sizeof(uint64_t)*n_partitions*2, stream, mr);
-        allocate_mem(&rkeys_partitions, false, sizeof(key_t)*(nr+2048), stream, mr);  // 1 Mc used, memory used now.
-        allocate_mem(&skeys_partitions, false, sizeof(key_t)*(ns+2048), stream, mr);  // 2 Mc used, memory used now.
-        allocate_mem(&rvals_partitions, false, sizeof(int32_t)*(nr+2048), stream, mr); // 3 Mc used, memory used now.
-        allocate_mem(&svals_partitions, false, sizeof(int32_t)*(ns+2048), stream, mr); // 4 Mc used, memory used now.
-        allocate_mem(&total_work, true, sizeof(int), stream, mr); // initialized to zero
-
-        allocate_mem(&r_match_idx, false, sizeof(int)*circular_buffer_size, stream, mr); // 5 Mc used
-        allocate_mem(&s_match_idx, false, sizeof(int)*circular_buffer_size, stream, mr); // 6 Mc Used
+//         allocate_mem(&rkeys_partitions, false, sizeof(key_t)*(nr+2048), stream, mr);  // 1 Mc used, memory used now.
+//         allocate_mem(&skeys_partitions, false, sizeof(key_t)*(ns+2048), stream, mr);  // 2 Mc used, memory used now.
+//         allocate_mem(&rvals_partitions, false, sizeof(int32_t)*(nr+2048), stream, mr); // 3 Mc used, memory used now.
+//         allocate_mem(&svals_partitions, false, sizeof(int32_t)*(ns+2048), stream, mr); // 4 Mc used, memory used now.
+//         allocate_mem(&total_work, true, sizeof(int), stream, mr); // initialized to zero
+//
+//         allocate_mem(&r_match_idx, false, sizeof(int)*circular_buffer_size, stream, mr); // 5 Mc used
+//         allocate_mem(&s_match_idx, false, sizeof(int)*circular_buffer_size, stream, mr); // 6 Mc Used
 
         cudaEventCreate(&start);
         cudaEventCreate(&stop);
