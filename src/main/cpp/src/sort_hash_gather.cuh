@@ -50,9 +50,8 @@ public:
     , stream(stream)
     , mr(mr)
     {
-
-        allocate_mem(&keys_partitions, false, sizeof(key_t)*(circular_buffer+2048));  // 1 Mc used, memory used now.
-        allocate_mem(&vals_partitions, false, sizeof(int32_t)*(circular_buffer+2048)); // 3 Mc used, memory used now.
+        allocate_mem(&keys_partitions, false, sizeof(key_t)*(circular_buffer+2048), stream, mr);  // 1 Mc used, memory used now.
+        allocate_mem(&vals_partitions, false, sizeof(int32_t)*(circular_buffer+2048), stream, mr); // 3 Mc used, memory used now.
         cudaEventCreate(&start);
         cudaEventCreate(&stop);
     }
@@ -62,22 +61,16 @@ public:
 
         in_copy(&keys, source_table, 0);
 
-        // Assuming gather_map1 is your cudf::column_view
         int* match_idx; // Device pointer
 
-        // Allocate memory for s_match_idx on the device
-        cudaMalloc(&match_idx, gather_map.size() * sizeof(int));
-
-        // Copy data from the column_view to the device pointer
-        cudaMemcpy(match_idx, gather_map.data<int>(), gather_map.size() * sizeof(int), cudaMemcpyDeviceToDevice);
+        copy_column(&match_idx, gather_map);
 
         // Create a cudf::table from the column
         std::vector<std::unique_ptr<cudf::column>> columns;
 
         for (int i = 1; i < cols; ++i) {
-
             key_t* col {nullptr};
-            cudaMalloc(&col, circular_buffer * sizeof(key_t));
+            allocate_mem(&col, false, circular_buffer * sizeof(key_t), stream, mr);
             key_t* vals {nullptr};
 
             in_copy(&vals, source_table, i);
@@ -98,17 +91,14 @@ public:
 
             // Then, create a cudf::column from the column_view
             auto col_column = std::make_unique<cudf::column>(col_view);
-
             columns.push_back(std::move(col_column));
         }
-
         return std::make_unique<cudf::table>(std::move(columns));
     }
 
     ~SortHashGather() {
-
-        release_mem(keys_partitions);
-        release_mem(vals_partitions);
+        release_mem(keys_partitions, sizeof(key_t)*(circular_buffer+2048), stream, mr);
+        release_mem(vals_partitions, sizeof(int32_t)*(circular_buffer+2048), stream, mr);
 
         cudaEventDestroy(start);
         cudaEventDestroy(stop);
@@ -119,7 +109,6 @@ public:
     float copy_device_vector_time{0};
 
 private:
-
     void in_copy(key_t** arr, cudf::table_view table, int index){
 
         // Get the column_view for the first column (index 0) because we only support single key join now.
@@ -140,6 +129,20 @@ private:
         *arr = const_cast<key_t*>(reinterpret_cast<const key_t*>(data_ptr_r));
     }
 
+    void copy_column(key_t** arr, cudf::column_view gather_map){
+        cudf::data_type dtype_r = gather_map.type();
+        const void* data_ptr_r;
+        if (dtype_r.id() == cudf::type_id::INT32) {
+            // The column type is INT32
+            data_ptr_r = static_cast<const void*>(gather_map.data<int32_t>());
+            // Proceed with your INT32-specific logic here
+        } else {
+            // Handle other data types or throw an error if INT32 is required
+             throw std::runtime_error("R key type not supported");
+        }
+
+        *arr = const_cast<key_t*>(reinterpret_cast<const key_t*>(data_ptr_r));
+    }
 
     template<typename KeyT, typename ValueT>
     void partition_pairs(KeyT*    keys,
@@ -150,7 +153,6 @@ private:
                         const int num_items) {
         // offsets array to store offsets for each partition
         // num_items: number of key-value pairs to partition
-
         SinglePassPartition<KeyT, ValueT, int> ssp(keys, values, keys_out, values_out, offsets, num_items, first_bit, radix_bits, stream, mr);
         ssp.process();
     }
