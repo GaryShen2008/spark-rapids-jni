@@ -88,12 +88,12 @@ public:
     }
 
     ~SinglePassPartition() {
-        std::cout << "released." << std::endl;
-        TIME_FUNC_ACC(release_mem(d_temp_storage), test_Time4);
-        //release_mem(d_temp_storage, temp_storage_bytes, stream, mr);
-        std::cout << "test_time4: " << test_Time4 << std::endl;
+        //std::cout << "released." << std::endl;
+        //TIME_FUNC_ACC(release_mem(d_temp_storage), test_Time4);
+        release_mem(d_temp_storage, temp_storage_bytes, stream, mr);
+        //std::cout << "test_time4: " << test_Time4 << std::endl;
         TIME_FUNC_ACC(release_mem(d_counts_out, sizeof(int), stream, mr), test_Time5);
-        std::cout << "test_time5: " << test_Time5 << std::endl;
+        //std::cout << "test_time5: " << test_Time5 << std::endl;
     }
 
     template<typename T>
@@ -151,7 +151,7 @@ public:
 
     void test(){
         if(offsets) {
-            std::cout << "offsets" << std::endl;
+            //std::cout << "offsets" << std::endl;
             RadixExtractor<key_t> conversion_op(begin_bit, end_bit);
             cub::TransformInputIterator<key_t, RadixExtractor<key_t>, key_t*> itr(keys_out, conversion_op);
 
@@ -170,15 +170,15 @@ public:
     }
 
     void reassign_temp(size_t tmp_){
-       std::cout << "temp size:" << tmp_ << std::endl;
-       std::cout << "temp_storage_bytes:" << temp_storage_bytes << std::endl;
+       //std::cout << "temp size:" << tmp_ << std::endl;
+       //std::cout << "temp_storage_bytes:" << temp_storage_bytes << std::endl;
        if(tmp_ > temp_storage_bytes) {
            TIME_FUNC_ACC(release_mem(d_temp_storage, temp_storage_bytes, stream, mr), test_Time2);
            //release_mem(d_temp_storage, temp_storage_bytes, stream, mr);
-           std::cout << "test_time2: " << test_Time2 << std::endl;
+           //std::cout << "test_time2: " << test_Time2 << std::endl;
            TIME_FUNC_ACC(allocate_mem(&d_temp_storage, false, tmp_, stream, mr), test_Time3);
            //allocate_mem(&d_temp_storage, false, tmp_, stream, mr);
-           std::cout << "test_time3: " << test_Time3 << std::endl;
+           //std::cout << "test_time3: " << test_Time3 << std::endl;
            temp_storage_bytes = tmp_;
         }
     }

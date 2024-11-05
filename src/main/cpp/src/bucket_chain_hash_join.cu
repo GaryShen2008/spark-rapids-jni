@@ -34,7 +34,7 @@ inner_join(table_view const& left_input,
     int num_r = left_input.num_rows();
     int num_s = right_input.num_rows();
     int circular_buffer_size = std::max(num_r, num_s);
-    SortHashJoin shj(left_input, right_input, 0, 1, circular_buffer_size, stream, mr);
+    SortHashJoin shj(left_input, right_input, 0, 15, circular_buffer_size, stream, mr);
     auto result = shj.join(stream, mr);
     //std::cout << "partition time: " << shj.partition_time << std::endl;
     //std::cout << "join time: "<< shj.join_time << std::endl;

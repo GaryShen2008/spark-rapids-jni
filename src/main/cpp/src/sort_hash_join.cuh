@@ -48,6 +48,7 @@ public:
         nr = static_cast<int>(r.num_rows());
         ns = static_cast<int>(s.num_rows());
 
+
         // n_partitions is calculated as 2 raised to the power of radix_bits.
         n_partitions = (1 << radix_bits);
 
@@ -59,14 +60,14 @@ public:
         allocate_mem(&s_offsets, false, sizeof(int)*n_partitions, stream, mr);
         allocate_mem(&r_work,    false, sizeof(uint64_t)*n_partitions*2, stream, mr);
         allocate_mem(&s_work,    false, sizeof(uint64_t)*n_partitions*2, stream, mr);
-//         allocate_mem(&rkeys_partitions, false, sizeof(key_t)*(nr+2048), stream, mr);  // 1 Mc used, memory used now.
-//         allocate_mem(&skeys_partitions, false, sizeof(key_t)*(ns+2048), stream, mr);  // 2 Mc used, memory used now.
-//         allocate_mem(&rvals_partitions, false, sizeof(int32_t)*(nr+2048), stream, mr); // 3 Mc used, memory used now.
-//         allocate_mem(&svals_partitions, false, sizeof(int32_t)*(ns+2048), stream, mr); // 4 Mc used, memory used now.
-//         allocate_mem(&total_work, true, sizeof(int), stream, mr); // initialized to zero
-//
-//         allocate_mem(&r_match_idx, false, sizeof(int)*circular_buffer_size, stream, mr); // 5 Mc used
-//         allocate_mem(&s_match_idx, false, sizeof(int)*circular_buffer_size, stream, mr); // 6 Mc Used
+        allocate_mem(&rkeys_partitions, false, sizeof(key_t)*(nr+2048), stream, mr);  // 1 Mc used, memory used now.
+        allocate_mem(&skeys_partitions, false, sizeof(key_t)*(ns+2048), stream, mr);  // 2 Mc used, memory used now.
+        allocate_mem(&rvals_partitions, false, sizeof(int32_t)*(nr+2048), stream, mr); // 3 Mc used, memory used now.
+        allocate_mem(&svals_partitions, false, sizeof(int32_t)*(ns+2048), stream, mr); // 4 Mc used, memory used now.
+        allocate_mem(&total_work, true, sizeof(int), stream, mr); // initialized to zero
+
+        allocate_mem(&r_match_idx, false, sizeof(int)*circular_buffer_size, stream, mr); // 5 Mc used
+        allocate_mem(&s_match_idx, false, sizeof(int)*circular_buffer_size, stream, mr); // 6 Mc Used
 
         cudaEventCreate(&start);
         cudaEventCreate(&stop);
@@ -116,19 +117,19 @@ public:
     std::pair<std::unique_ptr<rmm::device_uvector<cudf::size_type>>,
               std::unique_ptr<rmm::device_uvector<cudf::size_type>>> join(rmm::cuda_stream_view stream,
                                 rmm::device_async_resource_ref mr){
-//         TIME_FUNC_ACC(partition(), partition_time);
-//         //partition();
-//         TIME_FUNC_ACC(join_copartitions(), join_time);
-        //join_copartitions();
+        TIME_FUNC_ACC(partition(), partition_time);
+//        partition();
+        TIME_FUNC_ACC(join_copartitions(), join_time);
+//        join_copartitions();
         //TIME_FUNC_ACC(materialize_by_gather(), mat_time);
         //std::cout << "n_matches: " << n_matches << std::endl;
         auto r_match_uvector = std::make_unique<rmm::device_uvector<cudf::size_type>>(n_matches, stream, mr);
         auto s_match_uvector = std::make_unique<rmm::device_uvector<cudf::size_type>>(n_matches, stream, mr);
 
-        //TIME_FUNC_ACC(copy_device_vector(r_match_uvector, s_match_uvector,
-            //r_match_idx, s_match_idx), copy_device_vector_time);
-//         copy_device_vector(r_match_uvector, s_match_uvector,
-//                         r_match_idx, s_match_idx);
+        TIME_FUNC_ACC(copy_device_vector(r_match_uvector, s_match_uvector,
+            r_match_idx, s_match_idx), copy_device_vector_time);
+        copy_device_vector(r_match_uvector, s_match_uvector,
+                        r_match_idx, s_match_idx);
 
         // Return the pair of unique_ptrs to device_uvectors
         return std::make_pair(std::move(r_match_uvector), std::move(s_match_uvector));
@@ -286,6 +287,7 @@ private:
 //
 //         std::cout << std::endl;
 //         delete[] h_rkeys_partitions;
+        //std::cout << "partition is fine" << std::endl;
 
     }
 

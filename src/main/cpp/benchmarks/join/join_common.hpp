@@ -17,7 +17,7 @@
 #pragma once
 
 #include "generate_input_tables.cuh"
-
+#include "bucket_chain_hash_join.hpp"
 //#include <fixture/benchmark_fixture.hpp>
 
 #include <cudf/ast/expressions.hpp>
@@ -25,11 +25,13 @@
 #include <cudf/detail/valid_if.cuh>
 #include <cudf/filling.hpp>
 #include <cudf/join.hpp>
+#include <cudf/copying.hpp>
 #include <cudf/scalar/scalar_factories.hpp>
 #include <cudf/table/table_view.hpp>
 #include <cudf/utilities/default_stream.hpp>
 #include <cudf/utilities/error.hpp>
 #include <cudf/utilities/memory_resource.hpp>
+
 
 #include <thrust/functional.h>
 #include <thrust/iterator/counting_iterator.h>
@@ -44,7 +46,7 @@
 using JOIN_KEY_TYPE_RANGE = nvbench::type_list<nvbench::int32_t>;
 using JOIN_NULLABLE_RANGE = nvbench::enum_type_list<false, true>;
 
-auto const JOIN_SIZE_RANGE = std::vector<nvbench::int64_t>{100'000, 10'000'000};
+auto const JOIN_SIZE_RANGE = std::vector<nvbench::int64_t>{100'000'000};
 
 struct null75_generator {
   thrust::minstd_rand engine;
@@ -65,17 +67,16 @@ template <typename Key,
           join_t join_type = join_t::HASH,
           typename state_type,
           typename Join>
-void BM_join(state_type& state, Join JoinFunc)
+void BM_join(state_type& state, Join JoinFunc, bool gather = false, bool shGather = false)
 {
   auto const right_size = static_cast<cudf::size_type>(state.get_int64("right_size"));
   auto const left_size  = static_cast<cudf::size_type>(state.get_int64("left_size"));
 
   if (right_size > left_size) {
     state.skip("Skip large right table");
-    return;
   }
 
-  double const selectivity = 0.3;
+  double const selectivity = 0.9;
   int const multiplicity   = 1;
 
   // Generate build and probe tables
@@ -158,7 +159,6 @@ void BM_join(state_type& state, Join JoinFunc)
     state.exec(nvbench::exec_tag::sync, [&](nvbench::launch& launch) {
       auto result =
         JoinFunc(left_table, right_table, left_zero_eq_right_zero, cudf::null_equality::UNEQUAL);
-      ;
     });
   }
   if constexpr (join_type == join_t::MIXED) {
@@ -177,9 +177,25 @@ void BM_join(state_type& state, Join JoinFunc)
   }
   if constexpr (join_type == join_t::HASH) {
     state.exec(nvbench::exec_tag::sync, [&](nvbench::launch& launch) {
-      auto result = JoinFunc(left_table.select(columns_to_join),
+      auto const [left_join_indices, right_join_indices] = JoinFunc(left_table.select(columns_to_join),
                              right_table.select(columns_to_join),
                              cudf::null_equality::UNEQUAL);
+      if(gather){
+          auto left_indices_span  = cudf::device_span<cudf::size_type const>{*left_join_indices};
+          auto right_indices_span = cudf::device_span<cudf::size_type const>{*right_join_indices};
+
+          auto left_indices_col  = cudf::column_view{left_indices_span};
+          auto right_indices_col = cudf::column_view{right_indices_span};
+          if(!shGather){
+            auto left_result  = cudf::gather(left_table, left_indices_col, cudf::out_of_bounds_policy::DONT_CHECK);
+            auto right_result = cudf::gather(right_table, right_indices_col, cudf::out_of_bounds_policy::DONT_CHECK);
+          }
+          else if (shGather){
+            auto left_result  = spark_rapids_jni::gather(left_table, left_indices_col, cudf::out_of_bounds_policy::DONT_CHECK);
+            auto right_result = spark_rapids_jni::gather(right_table, right_indices_col, cudf::out_of_bounds_policy::DONT_CHECK);
+          }
+      }
     });
+
   }
 }

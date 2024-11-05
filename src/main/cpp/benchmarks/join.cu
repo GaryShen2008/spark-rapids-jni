@@ -16,33 +16,73 @@
 
 #include <join/join_common.hpp>
 #include "bucket_chain_hash_join.hpp"
+#include <rmm/mr/device/cuda_async_memory_resource.hpp>
 
 template <typename Key, bool Nullable>
 void nvbench_inner_join(nvbench::state& state,
                         nvbench::type_list<Key, nvbench::enum_type<Nullable>>)
 {
+//   rmm::mr::cuda_async_memory_resource async_mr{};
+//   rmm::mr::set_current_device_resource(&async_mr);
   auto join = [](cudf::table_view const& left_input,
                  cudf::table_view const& right_input,
                  cudf::null_equality compare_nulls) {
     return cudf::inner_join(left_input, right_input, compare_nulls);
   };
-  BM_join<Key, Nullable>(state, join);
+  BM_join<Key, Nullable>(state, join, false);
+}
+
+template <typename Key, bool Nullable>
+void nvbench_inner_join2(nvbench::state& state,
+                        nvbench::type_list<Key, nvbench::enum_type<Nullable>>)
+{
+//   rmm::mr::cuda_async_memory_resource async_mr{};
+//   rmm::mr::set_current_device_resource(&async_mr);
+  auto join = [](cudf::table_view const& left_input,
+                 cudf::table_view const& right_input,
+                 cudf::null_equality compare_nulls) {
+    return cudf::inner_join(left_input, right_input, compare_nulls);
+  };
+  BM_join<Key, Nullable>(state, join, true);
 }
 
 template <typename Key, bool Nullable>
 void nvbench_sort_hash_join(nvbench::state& state, nvbench::type_list<Key, nvbench::enum_type<Nullable>>)
 {
+    // Option 2: Set as current device resource
+    rmm::mr::cuda_async_memory_resource async_mr{};
+    rmm::mr::set_current_device_resource(&async_mr);
   auto join = [](cudf::table_view const& left_input,
                  cudf::table_view const& right_input,
                  cudf::null_equality compare_nulls) {
     return spark_rapids_jni::inner_join(left_input, right_input, compare_nulls);
   };
-  BM_join<Key, Nullable>(state, join);
+  BM_join<Key, Nullable>(state, join, false, false);
 }
+
+// template <typename Key, bool Nullable>
+// void nvbench_sort_hash_join2(nvbench::state& state, nvbench::type_list<Key, nvbench::enum_type<Nullable>>)
+// {
+//     // Option 2: Set as current device resource
+//     rmm::mr::cuda_async_memory_resource async_mr{};
+//     rmm::mr::set_current_device_resource(&async_mr);
+//   auto join = [](cudf::table_view const& left_input,
+//                  cudf::table_view const& right_input,
+//                  cudf::null_equality compare_nulls) {
+//     return spark_rapids_jni::inner_join(left_input, right_input, compare_nulls);
+//   };
+//   BM_join<Key, Nullable>(state, join, true, true);
+// }
 
 
 NVBENCH_BENCH_TYPES(nvbench_inner_join, NVBENCH_TYPE_AXES(JOIN_KEY_TYPE_RANGE, JOIN_NULLABLE_RANGE))
   .set_name("inner_join")
+  .set_type_axes_names({"Key", "Nullable"})
+  .add_int64_axis("left_size", JOIN_SIZE_RANGE)
+  .add_int64_axis("right_size", JOIN_SIZE_RANGE);
+
+NVBENCH_BENCH_TYPES(nvbench_inner_join2, NVBENCH_TYPE_AXES(JOIN_KEY_TYPE_RANGE, JOIN_NULLABLE_RANGE))
+  .set_name("inner_join2")
   .set_type_axes_names({"Key", "Nullable"})
   .add_int64_axis("left_size", JOIN_SIZE_RANGE)
   .add_int64_axis("right_size", JOIN_SIZE_RANGE);
@@ -52,3 +92,9 @@ NVBENCH_BENCH_TYPES(nvbench_sort_hash_join, NVBENCH_TYPE_AXES(JOIN_KEY_TYPE_RANG
   .set_type_axes_names({"Key", "Nullable"})
   .add_int64_axis("left_size", JOIN_SIZE_RANGE)
   .add_int64_axis("right_size", JOIN_SIZE_RANGE);
+//
+// NVBENCH_BENCH_TYPES(nvbench_sort_hash_join2, NVBENCH_TYPE_AXES(JOIN_KEY_TYPE_RANGE, JOIN_NULLABLE_RANGE))
+//   .set_name("inner_join_bucket2")
+//   .set_type_axes_names({"Key", "Nullable"})
+//   .add_int64_axis("left_size", JOIN_SIZE_RANGE)
+//   .add_int64_axis("right_size", JOIN_SIZE_RANGE);

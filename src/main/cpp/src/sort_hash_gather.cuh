@@ -96,8 +96,6 @@ public:
                 0  // null count (0 if no null values)
             );
 
-            //print_column_view(col_view);
-
             // Then, create a cudf::column from the column_view
             auto col_column = std::make_unique<cudf::column>(col_view);
 
@@ -105,27 +103,6 @@ public:
         }
 
         return std::make_unique<cudf::table>(std::move(columns));
-    }
-
-    void print_column_view(cudf::column_view const& col) {
-        // Check the type of the column
-        if (col.type().id() == cudf::type_id::INT32) {
-            // Create a device vector from the column data
-            thrust::device_vector<int> d_data(col.begin<int>(), col.end<int>());
-
-            // Copy to host
-            thrust::host_vector<int> h_data = d_data;
-
-            // Print the data
-            for (auto const& val : h_data) {
-                std::cout << val << " ";
-            }
-            std::cout << std::endl;
-        }
-        else {
-            // Handle other types as needed
-            std::cout << "Unsupported type" << std::endl;
-        }
     }
 
     ~SortHashGather() {
