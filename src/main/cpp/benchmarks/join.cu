@@ -17,6 +17,10 @@
 #include <join/join_common.hpp>
 #include "bucket_chain_hash_join.hpp"
 #include <rmm/mr/device/cuda_async_memory_resource.hpp>
+#include <rmm/mr/device/tracking_resource_adaptor.hpp>
+#include <rmm/mr/device/cuda_memory_resource.hpp>
+
+using tracking_adaptor = rmm::mr::tracking_resource_adaptor<rmm::mr::device_memory_resource>;
 
 template <typename Key, bool Nullable>
 void nvbench_inner_join(nvbench::state& state,
@@ -50,6 +54,7 @@ template <typename Key, bool Nullable>
 void nvbench_sort_hash_join(nvbench::state& state, nvbench::type_list<Key, nvbench::enum_type<Nullable>>)
 {
     // Option 2: Set as current device resource
+    std::cout<<"start" << std::endl;
     rmm::mr::cuda_async_memory_resource async_mr{};
     rmm::mr::set_current_device_resource(&async_mr);
   auto join = [](cudf::table_view const& left_input,
@@ -58,22 +63,28 @@ void nvbench_sort_hash_join(nvbench::state& state, nvbench::type_list<Key, nvben
     return spark_rapids_jni::inner_join(left_input, right_input, compare_nulls);
   };
   BM_join<Key, Nullable>(state, join, false, false);
+  std::cout<<"end" << std::endl;
 }
 
 template <typename Key, bool Nullable>
 void nvbench_sort_hash_join2(nvbench::state& state, nvbench::type_list<Key, nvbench::enum_type<Nullable>>)
 {
     // Option 2: Set as current device resource
-    rmm::mr::cuda_async_memory_resource async_mr{};
-    rmm::mr::set_current_device_resource(&async_mr);
+  rmm::mr::cuda_async_memory_resource async_mr{};
+  //rmm::mr::set_current_device_resource(&async_mr);
+
+  //auto* orig_device_resource = rmm::mr::get_current_device_resource();
+  tracking_adaptor mr{async_mr, true};
+  rmm::mr::set_current_device_resource(&mr);
+  std::cout << "Current allocated bytes1: " << mr.get_allocated_bytes() << std::endl;
   auto join = [](cudf::table_view const& left_input,
                  cudf::table_view const& right_input,
                  cudf::null_equality compare_nulls) {
     return spark_rapids_jni::inner_join(left_input, right_input, compare_nulls);
   };
   BM_join<Key, Nullable>(state, join, true, true);
+  std::cout << "Current allocated bytes3: " << mr.get_allocated_bytes() << std::endl;
 }
-
 
 NVBENCH_BENCH_TYPES(nvbench_inner_join, NVBENCH_TYPE_AXES(JOIN_KEY_TYPE_RANGE, JOIN_NULLABLE_RANGE))
   .set_name("inner_join")

@@ -74,7 +74,15 @@ public:
         else {
             cub::DeviceRadixSort::SortPairs(d_temp_storage, temp_storage_bytes, keys, keys_out, values, values_out, N, begin_bit, end_bit);
         }
-        allocate_mem(&d_temp_storage, false, temp_storage_bytes, stream, mr);
+        try{
+            allocate_mem(&d_temp_storage, false, temp_storage_bytes, stream, mr);
+        }catch (const std::bad_alloc& e) {
+            std::cerr << "Memory allocation failed: 2: " << temp_storage_bytes << " " << sizeof(int)*(n_partitions) << std::endl;
+
+            // Handle the error, e.g., by freeing up other resources
+        } catch (const std::exception& e) {
+            std::cerr << "An unexpected error occurred: 2" << e.what() << std::endl;
+        }
         cudaEventCreate(&start);
         cudaEventCreate(&stop);
     }

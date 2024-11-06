@@ -31,6 +31,8 @@
 #include <cudf/utilities/default_stream.hpp>
 #include <cudf/utilities/error.hpp>
 #include <cudf/utilities/memory_resource.hpp>
+#include <rmm/mr/device/tracking_resource_adaptor.hpp>
+#include <rmm/mr/device/cuda_async_memory_resource.hpp>
 
 
 #include <thrust/functional.h>
@@ -45,8 +47,9 @@
 
 using JOIN_KEY_TYPE_RANGE = nvbench::type_list<nvbench::int32_t>;
 using JOIN_NULLABLE_RANGE = nvbench::enum_type_list<false, true>;
+using tracking_adaptor = rmm::mr::tracking_resource_adaptor<rmm::mr::device_memory_resource>;
 
-auto const JOIN_SIZE_RANGE = std::vector<nvbench::int64_t>{10'000'000};
+auto const JOIN_SIZE_RANGE = std::vector<nvbench::int64_t>{200'000'000};
 
 struct null75_generator {
   thrust::minstd_rand engine;
@@ -181,6 +184,7 @@ void BM_join(state_type& state, Join JoinFunc, bool gather = false, bool shGathe
                              right_table.select(columns_to_join),
                              cudf::null_equality::UNEQUAL);
       if(gather){
+
           auto left_indices_span  = cudf::device_span<cudf::size_type const>{*left_join_indices};
           auto right_indices_span = cudf::device_span<cudf::size_type const>{*right_join_indices};
 
@@ -191,6 +195,8 @@ void BM_join(state_type& state, Join JoinFunc, bool gather = false, bool shGathe
             auto right_result = cudf::gather(right_table, right_indices_col, cudf::out_of_bounds_policy::DONT_CHECK);
           }
           else if (shGather){
+//            auto* mr = (tracking_adaptor*)rmm::mr::get_current_device_resource();
+//            std::cout <<"in gather: allocated2: " << mr->get_allocated_bytes() << std::endl;
             auto left_result  = spark_rapids_jni::gather(left_table, left_indices_col, cudf::out_of_bounds_policy::DONT_CHECK);
             auto right_result = spark_rapids_jni::gather(right_table, right_indices_col, cudf::out_of_bounds_policy::DONT_CHECK);
           }

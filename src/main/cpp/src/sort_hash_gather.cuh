@@ -15,6 +15,8 @@
 #include <rmm/cuda_stream_view.hpp>
 #include <rmm/device_buffer.hpp>
 #include <rmm/device_vector.hpp>
+#include <rmm/mr/device/tracking_resource_adaptor.hpp>
+#include <rmm/mr/device/cuda_memory_resource.hpp>
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
 #include "utils.cuh"
@@ -50,8 +52,8 @@ public:
     , stream(stream)
     , mr(mr)
     {
-        allocate_mem(&keys_partitions, false, sizeof(key_t)*(circular_buffer+2048), stream, mr);  // 1 Mc used, memory used now.
-        allocate_mem(&vals_partitions, false, sizeof(int32_t)*(circular_buffer+2048), stream, mr); // 3 Mc used, memory used now.
+        keys_partitions = (key_t*)mr.allocate_async(sizeof(key_t)*(circular_buffer+2048), stream);  // 1 Mc used, memory used now.
+        vals_partitions = (key_t*)mr.allocate_async(sizeof(key_t)*(circular_buffer+2048), stream); // 3 Mc used, memory used now.
         cudaEventCreate(&start);
         cudaEventCreate(&stop);
     }
@@ -70,11 +72,28 @@ public:
 
         for (int i = 1; i < cols; ++i) {
             key_t* col {nullptr};
-            allocate_mem(&col, false, circular_buffer * sizeof(key_t), stream, mr);
+            try{
+                col = (key_t*)mr.allocate_async(circular_buffer * sizeof(key_t), stream);
+            }
+            catch (const std::bad_alloc& e) {
+                std::cerr << 1 << " Memory allocation failed: " << e.what() << std::endl;
+                  // Handle the error, e.g., by freeing up other resources
+            } catch (const std::exception& e) {
+                std::cerr << 1 << " An unexpected error occurred: " << e.what() << std::endl;
+            }
             key_t* vals {nullptr};
-
+            //std::cout << "Current allocated bytes1: " << tracking_mr->get_allocated_bytes() << std::endl;
             in_copy(&vals, source_table, i);
-            if(i > 0) partition_pairs(keys, vals, (key_t*)keys_partitions, (key_t*)vals_partitions, nullptr, circular_buffer); // Mt + 2Mc is allocated.
+            //std::cout << "partition_pairs is not fine";
+            try{
+                if(i > 0) partition_pairs(keys, vals, (key_t*)keys_partitions, (key_t*)vals_partitions, nullptr, circular_buffer); // Mt + 2Mc is allocated.
+            } catch (const std::bad_alloc& e) {
+                std::cerr << "Memory allocation failed: " << e.what() << std::endl;
+                // Handle the error, e.g., by freeing up other resources
+            } catch (const std::exception& e) {
+                std::cerr << "An unexpected error occurred: " << e.what() << std::endl;
+            }
+            //std::cout << "Current allocated bytes2: " << mr.get_allocated_bytes() << std::endl;
             thrust::device_ptr<key_t> dev_data_ptr((key_t*)vals_partitions);
             thrust::device_ptr<int> dev_idx_ptr(match_idx);
 
@@ -91,8 +110,10 @@ public:
 
             // Then, create a cudf::column from the column_view
             auto col_column = std::make_unique<cudf::column>(col_view);
+            mr.deallocate_async(col, circular_buffer * sizeof(key_t), stream);
             columns.push_back(std::move(col_column));
         }
+        //std::cout << "end of gather" << std::endl;
         return std::make_unique<cudf::table>(std::move(columns));
     }
 
@@ -158,6 +179,8 @@ private:
     }
 
 private:
+
+    // Add tracking resource as a member
 
     const cudf::table_view source_table;
 
