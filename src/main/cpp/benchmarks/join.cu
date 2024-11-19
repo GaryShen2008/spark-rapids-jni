@@ -26,8 +26,8 @@ template <typename Key, bool Nullable>
 void nvbench_inner_join(nvbench::state& state,
                         nvbench::type_list<Key, nvbench::enum_type<Nullable>>)
 {
-//   rmm::mr::cuda_async_memory_resource async_mr{};
-//   rmm::mr::set_current_device_resource(&async_mr);
+  rmm::mr::cuda_async_memory_resource async_mr{};
+  rmm::mr::set_current_device_resource(&async_mr);
   auto join = [](cudf::table_view const& left_input,
                  cudf::table_view const& right_input,
                  cudf::null_equality compare_nulls) {
@@ -40,8 +40,8 @@ template <typename Key, bool Nullable>
 void nvbench_inner_join2(nvbench::state& state,
                         nvbench::type_list<Key, nvbench::enum_type<Nullable>>)
 {
-//   rmm::mr::cuda_async_memory_resource async_mr{};
-//   rmm::mr::set_current_device_resource(&async_mr);
+  rmm::mr::cuda_async_memory_resource async_mr{};
+  rmm::mr::set_current_device_resource(&async_mr);
   auto join = [](cudf::table_view const& left_input,
                  cudf::table_view const& right_input,
                  cudf::null_equality compare_nulls) {
@@ -82,7 +82,7 @@ void nvbench_sort_hash_join2(nvbench::state& state, nvbench::type_list<Key, nvbe
                  cudf::null_equality compare_nulls) {
     return spark_rapids_jni::inner_join(left_input, right_input, compare_nulls);
   };
-  BM_join<Key, Nullable>(state, join, true, true);
+  BM_join<Key, Nullable>(state, join, true, false);
   std::cout << "Current allocated bytes3: " << mr.get_allocated_bytes() << std::endl;
 }
 

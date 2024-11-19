@@ -15,7 +15,7 @@ public class SortHashJoinTest {
         tb1.column(10, 90, 2, 3, 4, 3, 9);
 
         Table.TestBuilder tb2 = new Table.TestBuilder();
-        tb2.column(1, 9, 2, 3, 6, 8, 4, 12, 14, 19, 99999);
+        tb2.column(1, 9, 2, 3, 6, 8, 4, 12, 14, 19, 9999);
         tb2.column(1, 9, 2, 3, 6, 8, 777, 12, 14, 19, 9);
         tb2.column(10, 90, 2, 3, 6, 8, 777, 12, 14, 19, 9);
 
@@ -51,29 +51,29 @@ public class SortHashJoinTest {
         for(int i = 0; i < (int) map[1].getRowCount(); i++){
             System.out.print(colV2.getScalarElement(i).getInt() + " ");
         }
-
-        System.out.println("\nthis is table 1 gathered");
-
-        Table result = BucketChainHashJoin.gather(left, colV1);
-
-        for (int i = 0; i < result.getNumberOfColumns(); i++) {
-            ColumnVector column = result.getColumn(i);
-            System.out.print("Column " + i + ": ");
-            for (int j = 0; j < column.getRowCount(); j++) {
-                System.out.print(column.getScalarElement(j).getInt() + " "); // Adjust the get method based on data type}
-            }
-        }
-
-        System.out.println("\nthis is table 2");
-        Table result2 = BucketChainHashJoin.gather(right, colV2);
-
-        for (int i = 0; i < result2.getNumberOfColumns(); i++) {
-            ColumnVector column = result2.getColumn(i);
-            System.out.print("Column " + i + ": ");
-            for (int j = 0; j < column.getRowCount(); j++) {
-                System.out.print(column.getScalarElement(j).getInt() + " "); // Adjust the get method based on data type}
-            }
-        }
+//
+//        System.out.println("\nthis is table 1 gathered");
+//
+//        Table result = BucketChainHashJoin.gather(left, colV1);
+//
+//        for (int i = 0; i < result.getNumberOfColumns(); i++) {
+//            ColumnVector column = result.getColumn(i);
+//            System.out.print("Column " + i + ": ");
+//            for (int j = 0; j < column.getRowCount(); j++) {
+//                System.out.print(column.getScalarElement(j).getInt() + " "); // Adjust the get method based on data type}
+//            }
+//        }
+//
+//        System.out.println("\nthis is table 2");
+//        Table result2 = BucketChainHashJoin.gather(right, colV2);
+//
+//        for (int i = 0; i < result2.getNumberOfColumns(); i++) {
+//            ColumnVector column = result2.getColumn(i);
+//            System.out.print("Column " + i + ": ");
+//            for (int j = 0; j < column.getRowCount(); j++) {
+//                System.out.print(column.getScalarElement(j).getInt() + " "); // Adjust the get method based on data type}
+//            }
+//        }
 
 
     }
