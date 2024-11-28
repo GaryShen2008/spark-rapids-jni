@@ -226,10 +226,12 @@ __global__ void join_copartitions_arr(const KeyT* R,
                                       ValT*       r_output,
                                       ValT*       s_output,
                                       const int   circular_buffer_size) {
+    // LOCAL_BUCKETS = 1 << 11
     constexpr int LOCAL_BUCKETS = (1 << LOCAL_BUCKETS_BITS);
 
     extern __shared__ int16_t temp[];
 
+    // SHUFFLE_SIZE = 32
     struct shuffle_space {
         ValT val_S_elem[SHUFFLE_SIZE];
         ValT val_R_elem[SHUFFLE_SIZE];
@@ -404,10 +406,6 @@ __global__ void join_copartitions_arr(const KeyT* R,
         }
     }
 }
-
-
-
-
 
 template<int NT = 512,
          int VT = 4,

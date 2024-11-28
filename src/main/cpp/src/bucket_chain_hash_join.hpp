@@ -63,6 +63,8 @@ class partition_hash_join{
 
   private:
 
+    const cudf::table_view& r;
+    const cudf::table_view& s;
     // following code was copied from cudf
     bool const _is_empty;   ///< true if `_hash_table` is empty
     bool const _has_nulls;  ///< true if nulls are present in either build table or any probe table

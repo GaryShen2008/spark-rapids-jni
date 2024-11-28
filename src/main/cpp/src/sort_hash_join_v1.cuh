@@ -283,7 +283,7 @@ private:
 
 
 
-        generate_work_units<<<num_tb(n_partitions,512),512>>>(r_offsets, s_offsets, r_work, s_work, total_work, n_partitions, threshold);
+        generate_work_units<<<num_tb(n_partitions,512),512>>>(s_offsets, r_offsets, s_work, r_work, total_work, n_partitions, threshold);
         // Peek Mt + 4Mc
         // Used mem after exit = 4 Mc
     }
