@@ -180,7 +180,7 @@ void print_gpu_arr(const T* arr, size_t n, size_t offset=0) {
     T* temp = new T[n];
     cudaMemcpy(temp, arr+offset, sizeof(T)*n, cudaMemcpyDeviceToHost);
     printf("%p: ", arr);
-    for(auto i = 0; i < n; i++) {
+    for(size_t i = 0; i < n; i++) {
         std::cout << temp[i] << " ";
     }
     std::cout << std::endl;

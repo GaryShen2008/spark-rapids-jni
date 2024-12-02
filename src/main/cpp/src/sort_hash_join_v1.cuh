@@ -41,23 +41,26 @@ public:
     , s(s_in)
     , first_bit(first_bit)
     , circular_buffer_size(circular_buffer_size)
-    , radix_bits(radix_bits)
+    //, radix_bits(radix_bits)
     , stream(stream)
     , mr(mr)
     {
         nr = static_cast<int>(r.num_rows());
         ns = static_cast<int>(s.num_rows());
 
-
+        radix_bits = 3;
+        coarse_radix_bits = 6;
         // n_partitions is calculated as 2 raised to the power of radix_bits.
         n_partitions = (1 << radix_bits);
-
+        n_coarse_partitions = (1 << coarse_radix_bits);
         //out.allocate(circular_buffer_size);
 
         allocate_mem(&d_n_matches, true, sizeof(unsigned long long int), stream, mr);
 
         allocate_mem(&r_offsets, false, sizeof(int)*n_partitions, stream, mr);
         allocate_mem(&s_offsets, false, sizeof(int)*n_partitions, stream, mr);
+        allocate_mem(&r_coarse_offsets, false, sizeof(int)*n_coarse_partitions, stream, mr);
+        allocate_mem(&s_coarse_offsets, false, sizeof(int)*n_coarse_partitions, stream, mr);
         allocate_mem(&r_work,    false, sizeof(uint64_t)*n_partitions*2, stream, mr);
         allocate_mem(&s_work,    false, sizeof(uint64_t)*n_partitions*2, stream, mr);
         allocate_mem(&rkeys_partitions, false, sizeof(key_t)*(nr+2048), stream, mr);  // 1 Mc used, memory used now.
@@ -124,17 +127,19 @@ public:
                                 rmm::device_async_resource_ref mr){
         TIME_FUNC_ACC(partition(), partition_time);
 //        partition();
-        TIME_FUNC_ACC(join_copartitions(), join_time);
-//        join_copartitions();
+
+//         TIME_FUNC_ACC(join_copartitions(), join_time);
+       join_copartitions();
         //TIME_FUNC_ACC(materialize_by_gather(), mat_time);
-        //std::cout << "n_matches: " << n_matches << std::endl;
+        std::cout << "n_matches: " << n_matches << std::endl;
         auto r_match_uvector = std::make_unique<rmm::device_uvector<cudf::size_type>>(n_matches, stream, mr);
         auto s_match_uvector = std::make_unique<rmm::device_uvector<cudf::size_type>>(n_matches, stream, mr);
-
-        TIME_FUNC_ACC(copy_device_vector(r_match_uvector, s_match_uvector,
-            r_match_idx, s_match_idx), copy_device_vector_time);
+        print_gpu_arr(r_match_idx, n_matches);
+        print_gpu_arr(s_match_idx, n_matches);
         copy_device_vector(r_match_uvector, s_match_uvector,
-                        r_match_idx, s_match_idx);
+            r_match_idx, s_match_idx);
+// s_match_idx        copy_device_vector(r_match_uvector, s_match_uvector,
+//             r_match_idx, s_match_idx);
 
         // Return the pair of unique_ptrs to device_uvectors
         return std::make_pair(std::move(r_match_uvector), std::move(s_match_uvector));
@@ -219,15 +224,10 @@ private:
                         const int num_items) {
         // offsets array to store offsets for each partition
         // num_items: number of key-value pairs to partition
-        SETUP_TIMING();
+        //SETUP_TIMING();
+
         SinglePassPartition<KeyT, ValueT, int> ssp(keys, values, keys_out, values_out, offsets, num_items, first_bit, radix_bits, stream, mr);
-        if(partition_process_time1 == 0){
-            TIME_FUNC_ACC(ssp.process(), partition_process_time1);
-        }
-        else{
-            TIME_FUNC_ACC(ssp.process(), partition_process_time2);
-        }
-        //ssp.process();
+        ssp.process();
     }
 
     void in_copy(key_t** arr, cudf::table_view table, int index){
@@ -266,13 +266,19 @@ private:
 //         TIME_FUNC_ACC(partition_pairs(skeys, svals,
 //                         skeys_partitions, (key_t*)svals_partitions,
 //                         s_offsets, ns), partition_pair2);
+        partition_pairs(rkeys, (key_t*)nullptr, rkeys_partitions, (key_t*)rvals_partitions, r_coarse_offsets, nr);
+        partition_pairs(skeys, (key_t*)nullptr, skeys_partitions, (key_t*)svals_partitions, s_coarse_offsets, ns);
+
+
         partition_pairs(rkeys, rkeys_partitions_tmp,
                                 rkeys_partitions, (key_t*)rvals_partitions,
                                 r_offsets, nr);
-
+//
+//
         partition_pairs(skeys, skeys_partitions_tmp,
                                 skeys_partitions, (key_t*)svals_partitions,
                                 s_offsets, ns);
+
         release_mem(rkeys_partitions_tmp, sizeof(key_t)*(nr+2048), stream, mr);
         release_mem(skeys_partitions_tmp, sizeof(key_t)*(ns+2048), stream, mr);
 //         TIME_FUNC_ACC(partition_pairs(rkeys, rvals,
@@ -280,12 +286,23 @@ private:
 //                         r_offsets, nr), partition_pair1);
 
         // Peek Mt + 2Mc
-
+        print_gpu_arr(r_offsets, (size_t) n_partitions);
 
 
         generate_work_units<<<num_tb(n_partitions,512),512>>>(s_offsets, r_offsets, s_work, r_work, total_work, n_partitions, threshold);
         // Peek Mt + 4Mc
         // Used mem after exit = 4 Mc
+        print_gpu_arr(r_offsets, (size_t) n_partitions);
+//         // for test identifying large partition
+//         int* fine_partition_flags;
+//         allocate_mem(&fine_partition_flags, false, sizeof(int) * n_partitions, stream, mr);
+//         identify_large_partitions<<<(n_partitions + 255) / 256, 256>>>(r_offsets, n_partitions, 3, fine_partition_flags);
+//         print_gpu_arr(fine_partition_flags, n_partitions);
+//         int* prefix_sum;
+//         allocate_mem(&prefix_sum, false, sizeof(int) * n_partitions, stream, mr);
+//         fine_partition_prefix_sum(fine_partition_flags, prefix_sum, n_partitions, stream, mr);
+//         print_gpu_arr(prefix_sum, n_partitions);
+
     }
 
     void join_copartitions() {
@@ -354,9 +371,13 @@ private:
     int circular_buffer_size;
     int first_bit;
     int n_partitions;
-    int radix_bits;
+    int n_coarse_partitions;
+    int radix_bits = 3;
+    int coarse_radix_bits = 6;
 
     unsigned long long int*   d_n_matches     {nullptr};
+    int* r_coarse_offsets  {nullptr};
+    int* s_coarse_offsets  {nullptr};
     int*   r_offsets       {nullptr};
     int*   s_offsets       {nullptr};
     uint64_t* r_work       {nullptr};

@@ -53,10 +53,10 @@ inner_join(table_view const& left_input,
   // circular_buffer_size and the radix bits should not set hardcode like this.
   int circular_buffer_size = std::max(num_r, num_s);
   if(num_s > num_r){
-    SortHashJoinV1 shj(left, right, 0, 17, circular_buffer_size, stream, mr);
+    SortHashJoinV1 shj(left, right, 0, 3, circular_buffer_size, stream, mr);
     return shj.join(stream, mr);
   } else {
-    SortHashJoinV1 shj(right, left, 0, 17, circular_buffer_size, stream, mr);
+    SortHashJoinV1 shj(right, left, 0, 3, circular_buffer_size, stream, mr);
     auto [right_result, left_result] = shj.join(stream, mr);
     return std::pair(std::move(left_result), std::move(right_result));
   }

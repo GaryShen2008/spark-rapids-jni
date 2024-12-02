@@ -38,6 +38,62 @@ __global__ void generate_work_units(const int* __restrict__  r_offsets,
     }
 }
 
+__global__ void generate_work_units_coarse_offsets(const int* r_fined_offsets,
+                                      const int* s_fined_offsets,
+                                      uint64_t*  __restrict__  r_work,
+                                      uint64_t*  __restrict__  s_work,
+                                      const int coarse_radix_bits,
+                                      const int fined_radix_bits,
+                                      const int* flag,
+                                      int* total_work,
+                                      const int threshold
+                                      ){
+    int fined_partition = 1 << fined_radix_bits;
+    int fined_partition_coarse_partition = 1 << (fined_radix_bits - coarse_radix_bits);
+    for(int p = get_cuda_tid(); p < fined_partition && flag[p/fined_partition_coarse_partition] == 1; p += nthreads()) {
+        uint64_t r_start = (p >= 1 ? r_fined_offsets[p-1] : 0);
+        uint64_t r_end = r_fined_offsets[p];
+        uint64_t s_start = (p >= 1 ? s_fined_offsets[p-1] : 0);
+        uint64_t s_end = s_fined_offsets[p];
+        auto r_len = r_end - r_start;
+        auto s_len = s_end - s_start;
+
+        auto n_units = (s_len + threshold - 1)/threshold;
+        auto pos = atomicAdd(total_work, n_units);
+
+        #pragma unroll
+        for(int i = 0; i < n_units; i++, pos++, s_len -= threshold, s_start += threshold) {
+            r_work[pos] = (r_start << 32) + r_len;
+            s_work[pos] = (s_start << 32) + min(s_len, (uint64_t)threshold);
+        }
+    }
+}
+
+__global__ void generate_work_units_coarse_offsets(const int* r_coarse_offsets,
+                                      const int* s_coarse_offsets,
+                                      uint64_t*  __restrict__  r_work,
+                                      uint64_t*  __restrict__  s_work,
+                                      const int coarse_radix_bits,
+                                      const int fined_radix_bits,
+                                      const int* flag,
+                                      int* total_work
+                                      ){
+    int coarse_partition = 1 << coarse_radix_bits;
+    for(int p = get_cuda_tid(); p < coarse_partition && flag[p] == 0; p += nthreads()) {
+        uint64_t r_start = (p >= 1 ? r_coarse_offsets[p-1] : 0);
+        uint64_t r_end = r_coarse_offsets[p];
+        uint64_t s_start = (p >= 1 ? s_coarse_offsets[p-1] : 0);
+        uint64_t s_end = s_coarse_offsets[p];
+        auto r_len = r_end - r_start;
+        auto s_len = s_end - s_start;
+
+        auto pos = atomicAdd(total_work, 1);
+
+        r_work[pos] = (r_start << 32) + r_len;
+        s_work[pos] = (s_start << 32) + s_len;
+    }
+}
+
 template<typename key_t, typename value_t, typename off_t>
 class SinglePassPartition {
 public:
@@ -83,8 +139,7 @@ public:
         } catch (const std::exception& e) {
             std::cerr << "An unexpected error occurred: 2" << e.what() << std::endl;
         }
-        cudaEventCreate(&start);
-        cudaEventCreate(&stop);
+
     }
 
     ~SinglePassPartition() {
@@ -92,7 +147,7 @@ public:
         //TIME_FUNC_ACC(release_mem(d_temp_storage), test_Time4);
         release_mem(d_temp_storage, temp_storage_bytes, stream, mr);
         //std::cout << "test_time4: " << test_Time4 << std::endl;
-        TIME_FUNC_ACC(release_mem(d_counts_out, sizeof(int), stream, mr), test_Time5);
+        release_mem(d_counts_out, sizeof(int), stream, mr);
         //std::cout << "test_time5: " << test_Time5 << std::endl;
     }
 
@@ -109,84 +164,33 @@ public:
     };
     
     void process() {
-        // Reuse the radix sort to partition
+       std::cout << radix_bits;
        if(values == nullptr){
-            //TIME_FUNC_ACC(cub::DeviceRadixSort::SortKeys(d_temp_storage, temp_storage_bytes, keys, keys_out, N, begin_bit, end_bit), test_Time);
-            cub::DeviceRadixSort::SortKeys(d_temp_storage, temp_storage_bytes, keys, keys_out, N, begin_bit, end_bit);
-//             key_t* h_rkeys_partitions = new key_t[N];;
-//             cudaMemcpy(h_rkeys_partitions, keys_out, sizeof(key_t)*N, cudaMemcpyDeviceToHost);-
-//             std::cout << std::endl;
-//             delete[] h_rkeys_partitions;
-            //std::cout << "test_time: " << test_Time << std::endl;
-        }
-        else {
-            cub::DeviceRadixSort::SortPairs(d_temp_storage, temp_storage_bytes, keys, keys_out, values, values_out, N, begin_bit, end_bit);
-        }
-        // Compute the offsets
-//         if(offsets) {
-//             std::cout << "offsets" << std::endl;
-//             RadixExtractor<key_t> conversion_op(begin_bit, end_bit);
-//             cub::TransformInputIterator<key_t, RadixExtractor<key_t>, key_t*> itr(keys_out, conversion_op);
-//
-//             size_t temp = 0;
-//             cub::DeviceHistogram::HistogramEven(nullptr, temp, itr, d_counts_out, n_partitions+1, 0, n_partitions, N);
-//             if(temp > temp_storage_bytes) {
-//                 release_mem(d_temp_storage);
-//                 allocate_mem(&d_temp_storage, false, temp);
-//                 temp_storage_bytes = temp;
-//             }
-//             cub::DeviceHistogram::HistogramEven(d_temp_storage, temp_storage_bytes, itr, d_counts_out, n_partitions+1, 0, n_partitions, N);
-//             // offsets = [23, 41, 66, 85, 100] in what n th partition we have how many data falling in?
-//             cub::DeviceScan::InclusiveSum(d_temp_storage, temp_storage_bytes, d_counts_out, offsets, n_partitions);
-//         }
+           //TIME_FUNC_ACC(cub::DeviceRadixSort::SortKeys(d_temp_storage, temp_storage_bytes, keys, keys_out, N, begin_bit, end_bit), test_Time);
+           cub::DeviceRadixSort::SortKeys(d_temp_storage, temp_storage_bytes, keys, keys_out, N, begin_bit, end_bit);
+       }
+       else {
+           cub::DeviceRadixSort::SortPairs(d_temp_storage, temp_storage_bytes, keys, keys_out, values, values_out, N, begin_bit, end_bit);
+       }
+       if(offsets) {
+           RadixExtractor<key_t> conversion_op(begin_bit, end_bit);
+           cub::TransformInputIterator<key_t, RadixExtractor<key_t>, key_t*> itr(keys_out, conversion_op);
 
-           test();
-//         std::cout << "test_time2: " << test_Time2 << std::endl;
+           size_t temp = 0;
+           cub::DeviceHistogram::HistogramEven(nullptr, temp, itr, d_counts_out, n_partitions+1, 0, n_partitions, N);
+           if(temp > temp_storage_bytes) {
+               release_mem(d_temp_storage, temp_storage_bytes, stream, mr);
+               allocate_mem(&d_temp_storage, false, temp, stream, mr);
+               temp_storage_bytes = temp;
+           }
+           cub::DeviceHistogram::HistogramEven(d_temp_storage, temp_storage_bytes, itr, d_counts_out, n_partitions+1, 0, n_partitions, N);
+           // offsets = [23, 41, 66, 85, 100] in what n th partition we have how many data falling in?
+           cub::DeviceScan::InclusiveSum(d_temp_storage, temp_storage_bytes, d_counts_out, offsets, n_partitions);
+       }
 
-    }
-
-    void test(){
-        if(offsets) {
-            //std::cout << "offsets" << std::endl;
-            RadixExtractor<key_t> conversion_op(begin_bit, end_bit);
-            cub::TransformInputIterator<key_t, RadixExtractor<key_t>, key_t*> itr(keys_out, conversion_op);
-
-            size_t temp = 0;
-            cub::DeviceHistogram::HistogramEven(nullptr, temp, itr, d_counts_out, n_partitions+1, 0, n_partitions, N);
-
-            reassign_temp(temp);
-
-            cub::DeviceHistogram::HistogramEven(d_temp_storage, temp_storage_bytes, itr, d_counts_out, n_partitions+1, 0, n_partitions, N);
-
-            // offsets = [23, 41, 66, 85, 100] in what n th partition we have how many data falling in?
-            cub::DeviceScan::InclusiveSum(d_temp_storage, temp_storage_bytes, d_counts_out, offsets, n_partitions);
-
-        }
-
-    }
-
-    void reassign_temp(size_t tmp_){
-       //std::cout << "temp size:" << tmp_ << std::endl;
-       //std::cout << "temp_storage_bytes:" << temp_storage_bytes << std::endl;
-       if(tmp_ > temp_storage_bytes) {
-           TIME_FUNC_ACC(release_mem(d_temp_storage, temp_storage_bytes, stream, mr), test_Time2);
-           //release_mem(d_temp_storage, temp_storage_bytes, stream, mr);
-           //std::cout << "test_time2: " << test_Time2 << std::endl;
-           TIME_FUNC_ACC(allocate_mem(&d_temp_storage, false, tmp_, stream, mr), test_Time3);
-           //allocate_mem(&d_temp_storage, false, tmp_, stream, mr);
-           //std::cout << "test_time3: " << test_Time3 << std::endl;
-           temp_storage_bytes = tmp_;
-        }
     }
 
 private:
-    cudaEvent_t start;
-    cudaEvent_t stop;
-    float test_Time {0};
-    float test_Time2 {0};
-    float test_Time3 {0};
-    float test_Time4 {0};
-    float test_Time5 {0};
     const int n_partitions;
     const key_t* keys; 
     const value_t* values; 
@@ -205,6 +209,9 @@ private:
 
     int*  d_counts_out {nullptr};
 };
+
+
+
 
 template<int NT = 512,
          int VT = 4,
@@ -406,6 +413,45 @@ __global__ void join_copartitions_arr(const KeyT* R,
         }
     }
 }
+
+__global__ void identify_large_partitions(const int* coarse_offset,
+                          int n_partitions,
+                          int bucket_size,
+                          int* fine_partition_flag){
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx >= n_partitions) return;
+    int start = idx == 0 ? 0 : coarse_offset[idx - 1];
+    int end = coarse_offset[idx];
+    int partition_size = coarse_offset[idx] - coarse_offset[idx - 1];
+    fine_partition_flag[idx] = (partition_size > bucket_size) ? 1 : 0;
+}
+
+// flags:      [0, 1, 1, 0, 1]
+// prefix_sum: [0, 0, 1, 1, 2]
+void fine_partition_prefix_sum(const int* fine_partition_flag,
+                                          int* fine_partition_prefix_sum,
+                                          int n_coarse_partitions,
+                                          rmm::cuda_stream_view stream,
+                                          rmm::device_async_resource_ref mr){
+    // Temporary storage for CUB
+    void* d_temp_storage = nullptr;
+    size_t temp_storage_bytes = 0;
+    cub::DeviceScan::ExclusiveSum(d_temp_storage,
+                                  temp_storage_bytes,
+                                  fine_partition_flag,
+                                  fine_partition_prefix_sum,
+                                  n_coarse_partitions);
+    allocate_mem(&d_temp_storage, false, temp_storage_bytes, stream, mr);
+    cub::DeviceScan::ExclusiveSum(d_temp_storage,
+                                  temp_storage_bytes,
+                                  fine_partition_flag,
+                                  fine_partition_prefix_sum,
+                                  n_coarse_partitions);
+    release_mem(d_temp_storage, temp_storage_bytes, stream, mr);
+
+}
+
+
 
 template<int NT = 512,
          int VT = 4,
