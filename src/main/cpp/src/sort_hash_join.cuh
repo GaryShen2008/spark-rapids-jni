@@ -32,10 +32,6 @@
 class SortHashJoin {
 
 public:
-    // views of two tables to be joined
-    // int first_bit: the first bit of key used for partition.
-    // int radix_bits: Used to determine the number of partitions, and the end bit.
-    // int circular_buffer_size: Size of a circular buffer used in the join operation.
     explicit SortHashJoin(cudf::table_view r_in, cudf::table_view s_in, int first_bit,  int radix_bits, int circular_buffer_size, rmm::cuda_stream_view stream, rmm::device_async_resource_ref mr)
     : r(r_in)
     , s(s_in)

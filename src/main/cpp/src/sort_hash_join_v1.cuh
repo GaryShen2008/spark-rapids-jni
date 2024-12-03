@@ -32,31 +32,24 @@
 class SortHashJoinV1 {
 
 public:
-    // views of two tables to be joined
-    // int first_bit: the first bit of key used for partition.
-    // int radix_bits: Used to determine the number of partitions, and the end bit.
-    // int circular_buffer_size: Size of a circular buffer used in the join operation.
     explicit SortHashJoinV1(cudf::table_view r_in, cudf::table_view s_in, int first_bit,  int radix_bits, int circular_buffer_size, rmm::cuda_stream_view stream, rmm::device_async_resource_ref mr)
     : r(r_in)
     , s(s_in)
     , first_bit(first_bit)
     , circular_buffer_size(circular_buffer_size)
-    //, radix_bits(radix_bits)
+    , radix_bits(radix_bits)
     , stream(stream)
     , mr(mr)
     {
         nr = static_cast<int>(r.num_rows());
         ns = static_cast<int>(s.num_rows());
 
-        radix_bits = 3;
         coarse_radix_bits = 6;
-        // n_partitions is calculated as 2 raised to the power of radix_bits.
+
         n_partitions = (1 << radix_bits);
         n_coarse_partitions = (1 << coarse_radix_bits);
-        //out.allocate(circular_buffer_size);
 
         allocate_mem(&d_n_matches, true, sizeof(unsigned long long int), stream, mr);
-
         allocate_mem(&r_offsets, false, sizeof(int)*n_partitions, stream, mr);
         allocate_mem(&s_offsets, false, sizeof(int)*n_partitions, stream, mr);
         allocate_mem(&r_coarse_offsets, false, sizeof(int)*n_coarse_partitions, stream, mr);
@@ -81,32 +74,6 @@ public:
         cudaEventCreate(&stop);
     }
 
-    void test_column_factories() {
-        auto empty_col = cudf::make_empty_column(cudf::data_type{cudf::type_id::INT32});
-        auto numeric_col = cudf::make_numeric_column(cudf::data_type{cudf::type_id::FLOAT64}, 1000);
-    }
-
-    void print_column_view(cudf::column_view const& col) {
-        // Check the type of the column
-        if (col.type().id() == cudf::type_id::INT32) {
-            // Create a device vector from the column data
-            thrust::device_vector<int> d_data(col.begin<int>(), col.end<int>());
-
-            // Copy to host
-            thrust::host_vector<int> h_data = d_data;
-
-            // Print the data
-            for (auto const& val : h_data) {
-                std::cout << val << " ";
-            }
-            std::cout << std::endl;
-        }
-        else {
-            // Handle other types as needed
-            std::cout << "Unsupported type" << std::endl;
-        }
-    }
-
     static std::unique_ptr<cudf::table> gatherTest() {
         // Create a column with 5 integers
         auto column = cudf::make_numeric_column(cudf::data_type(cudf::type_id::INT32), 5);
@@ -125,25 +92,12 @@ public:
     std::pair<std::unique_ptr<rmm::device_uvector<cudf::size_type>>,
               std::unique_ptr<rmm::device_uvector<cudf::size_type>>> join(rmm::cuda_stream_view stream,
                                 rmm::device_async_resource_ref mr){
-        TIME_FUNC_ACC(partition(), partition_time);
-//        partition();
-
-//         TIME_FUNC_ACC(join_copartitions(), join_time);
-       join_copartitions();
-        //TIME_FUNC_ACC(materialize_by_gather(), mat_time);
-        std::cout << "n_matches: " << n_matches << std::endl;
+        partition();
+        join_copartitions();
         auto r_match_uvector = std::make_unique<rmm::device_uvector<cudf::size_type>>(n_matches, stream, mr);
         auto s_match_uvector = std::make_unique<rmm::device_uvector<cudf::size_type>>(n_matches, stream, mr);
-        print_gpu_arr(r_match_idx, n_matches);
-        print_gpu_arr(s_match_idx, n_matches);
-        copy_device_vector(r_match_uvector, s_match_uvector,
-            r_match_idx, s_match_idx);
-// s_match_idx        copy_device_vector(r_match_uvector, s_match_uvector,
-//             r_match_idx, s_match_idx);
-
-        // Return the pair of unique_ptrs to device_uvectors
+        copy_device_vector(r_match_uvector, s_match_uvector, r_match_idx, s_match_idx);
         return std::make_pair(std::move(r_match_uvector), std::move(s_match_uvector));
-
     }
 
     ~SortHashJoinV1() {
@@ -179,22 +133,14 @@ private:
 
     void copy_device_vector(std::unique_ptr<rmm::device_uvector<cudf::size_type>> &r_match_uvector, std::unique_ptr<rmm::device_uvector<cudf::size_type>>& s_match_uvector,
     int*   r_match_idx , int* s_match_idx){
-        // Copy data from device to device_uvectors
 
         if (r_match_uvector->data() == nullptr || r_match_idx == nullptr) {
             std::cerr << "Error: Null pointer detected" << std::endl;
-            // Handle error
         }
 
         if (n_matches < 0) {
             std::cerr << "Error: Invalid number of matches: " << n_matches << std::endl;
-            // Handle error
         }
-
-//         std::cout << "r_match_uvector->data(): " << r_match_uvector->data() << std::endl;
-//         std::cout << "r_match_idx: " << r_match_idx << std::endl;
-//         std::cout << "n_matches: " << n_matches << std::endl;
-//         std::cout << "Copy size: " << (n_matches * sizeof(int)) << " bytes" << std::endl;
 
         cudaError_t cudaStatus = cudaMemcpy(r_match_uvector->data(), r_match_idx,
                                             n_matches * sizeof(int), cudaMemcpyDeviceToDevice);
@@ -224,18 +170,13 @@ private:
                         const int num_items) {
         // offsets array to store offsets for each partition
         // num_items: number of key-value pairs to partition
-        //SETUP_TIMING();
-
         SinglePassPartition<KeyT, ValueT, int> ssp(keys, values, keys_out, values_out, offsets, num_items, first_bit, radix_bits, stream, mr);
         ssp.process();
     }
 
     void in_copy(key_t** arr, cudf::table_view table, int index){
 
-        // Get the column_view for the first column (index 0) because we only support single key join now.
         cudf::column_view first_column = table.column(index);
-        //std::cout << first_column.size() << std::endl;
-        // Get the type of the first column.
         cudf::data_type dtype_r = first_column.type();
         const void* data_ptr_r;
         if (dtype_r.id() == cudf::type_id::INT32) {
@@ -246,7 +187,6 @@ private:
             // Handle other data types or throw an error if INT32 is required
              throw std::runtime_error("R key type not supported");
         }
-
         *arr = const_cast<key_t*>(reinterpret_cast<const key_t*>(data_ptr_r));
     }
 
@@ -263,18 +203,13 @@ private:
         //in_copy(&rvals, r, 0);
         //in_copy(&svals, s, 0);
 
-//         TIME_FUNC_ACC(partition_pairs(skeys, svals,
-//                         skeys_partitions, (key_t*)svals_partitions,
-//                         s_offsets, ns), partition_pair2);
         partition_pairs(rkeys, (key_t*)nullptr, rkeys_partitions, (key_t*)rvals_partitions, r_coarse_offsets, nr);
         partition_pairs(skeys, (key_t*)nullptr, skeys_partitions, (key_t*)svals_partitions, s_coarse_offsets, ns);
-
 
         partition_pairs(rkeys, rkeys_partitions_tmp,
                                 rkeys_partitions, (key_t*)rvals_partitions,
                                 r_offsets, nr);
-//
-//
+
         partition_pairs(skeys, skeys_partitions_tmp,
                                 skeys_partitions, (key_t*)svals_partitions,
                                 s_offsets, ns);
@@ -286,13 +221,13 @@ private:
 //                         r_offsets, nr), partition_pair1);
 
         // Peek Mt + 2Mc
-        print_gpu_arr(r_offsets, (size_t) n_partitions);
+        //print_gpu_arr(r_offsets, (size_t) n_partitions);
 
 
         generate_work_units<<<num_tb(n_partitions,512),512>>>(s_offsets, r_offsets, s_work, r_work, total_work, n_partitions, threshold);
         // Peek Mt + 4Mc
         // Used mem after exit = 4 Mc
-        print_gpu_arr(r_offsets, (size_t) n_partitions);
+        //print_gpu_arr(r_offsets, (size_t) n_partitions);
 //         // for test identifying large partition
 //         int* fine_partition_flags;
 //         allocate_mem(&fine_partition_flags, false, sizeof(int) * n_partitions, stream, mr);
@@ -333,8 +268,6 @@ private:
 
         CHECK_LAST_CUDA_ERROR();
         cudaMemcpy(&n_matches, d_n_matches, sizeof(n_matches), cudaMemcpyDeviceToHost);
-        // free 2Mc
-        // Used mem after exit = 4Mc
     }
 
 
@@ -350,20 +283,12 @@ private:
 
     int r_cols = r.num_columns();
     int s_cols = s.num_columns();
-    bool kAlwaysLateMaterialization = false;
-    bool r_materialize_early = (r_cols == 2 && !kAlwaysLateMaterialization);
-    bool s_materialize_early = (s_cols == 2 && !kAlwaysLateMaterialization);
-    bool early_materialization = (r_materialize_early && s_materialize_early);
+
     static constexpr uint32_t log2_bucket_size = 12;
     static constexpr uint32_t bucket_size = (1 << log2_bucket_size);
     static constexpr int LOCAL_BUCKETS_BITS = 11;
     static constexpr int SHUFFLE_SIZE = sizeof(key_t) == 4 ? 32 : 16;
     int threshold = 2*bucket_size;
-
-    //using key_t = std::tuple_element_t<0, typename TupleR::value_type>;
-    //using key_t = std::tuple_element_t<1, typename TupleR::value_type>;
-    //using key_t = std::tuple_element_t<1, typename TupleS::value_type>;
-    //cudf::table_view out;
 
     int nr;
     int ns;
@@ -372,7 +297,7 @@ private:
     int first_bit;
     int n_partitions;
     int n_coarse_partitions;
-    int radix_bits = 3;
+    int radix_bits;
     int coarse_radix_bits = 6;
 
     unsigned long long int*   d_n_matches     {nullptr};
