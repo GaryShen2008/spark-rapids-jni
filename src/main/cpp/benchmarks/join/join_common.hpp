@@ -49,7 +49,7 @@ using JOIN_KEY_TYPE_RANGE = nvbench::type_list<nvbench::int32_t>;
 using JOIN_NULLABLE_RANGE = nvbench::enum_type_list<false, true>;
 using tracking_adaptor = rmm::mr::tracking_resource_adaptor<rmm::mr::device_memory_resource>;
 
-auto const JOIN_SIZE_RANGE = std::vector<nvbench::int64_t>{100'000'000};
+auto const JOIN_SIZE_RANGE = std::vector<nvbench::int64_t>{6000, 100'000'000'0};
 
 struct null75_generator {
   thrust::minstd_rand engine;
@@ -75,8 +75,8 @@ void BM_join(state_type& state, Join JoinFunc, bool gather = false, bool shGathe
   auto const right_size = static_cast<cudf::size_type>(state.get_int64("right_size"));
   auto const left_size  = static_cast<cudf::size_type>(state.get_int64("left_size"));
 
-  if (right_size > left_size) {
-    state.skip("Skip large right table");
+  if (right_size < left_size) {
+    state.skip("Skip large left table");
   }
 
   double const selectivity = 0.9;
