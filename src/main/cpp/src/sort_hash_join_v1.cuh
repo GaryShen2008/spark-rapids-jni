@@ -44,34 +44,55 @@ public:
         nr = static_cast<int>(r.num_rows());
         ns = static_cast<int>(s.num_rows());
 
-        coarse_radix_bits = 6;
+        //coarse_radix_bits = 6;
 
         n_partitions = (1 << radix_bits);
-        n_coarse_partitions = (1 << coarse_radix_bits);
+        //n_coarse_partitions = (1 << coarse_radix_bits);
 
-        allocate_mem(&d_n_matches, true, sizeof(unsigned long long int), stream, mr);
-        allocate_mem(&r_offsets, false, sizeof(int)*n_partitions, stream, mr);
-        allocate_mem(&s_offsets, false, sizeof(int)*n_partitions, stream, mr);
-        allocate_mem(&r_coarse_offsets, false, sizeof(int)*n_coarse_partitions, stream, mr);
-        allocate_mem(&s_coarse_offsets, false, sizeof(int)*n_coarse_partitions, stream, mr);
-        allocate_mem(&r_work,    false, sizeof(uint64_t)*n_partitions*2, stream, mr);
-        allocate_mem(&s_work,    false, sizeof(uint64_t)*n_partitions*2, stream, mr);
-        allocate_mem(&rkeys_partitions, false, sizeof(key_t)*(nr+2048), stream, mr);  // 1 Mc used, memory used now.
-        allocate_mem(&skeys_partitions, false, sizeof(key_t)*(ns+2048), stream, mr);  // 2 Mc used, memory used now.
-        allocate_mem(&rkeys_partitions_tmp, false, sizeof(key_t)*(nr+2048), stream, mr);  // 1 Mc used, memory used now.
-        allocate_mem(&skeys_partitions_tmp, false, sizeof(key_t)*(ns+2048), stream, mr);  // 2 Mc used, memory used now.
-        allocate_mem(&rvals_partitions, false, sizeof(int32_t)*(nr+2048), stream, mr); // 3 Mc used, memory used now.
-        allocate_mem(&svals_partitions, false, sizeof(int32_t)*(ns+2048), stream, mr); // 4 Mc used, memory used now.
-        allocate_mem(&total_work, true, sizeof(int), stream, mr); // initialized to zero
+        try {
+            // Memory allocations with error handling
+            allocate_mem(&d_n_matches, true, sizeof(unsigned long long int), stream, mr);
+            allocate_mem(&r_offsets, false, sizeof(int) * n_partitions, stream, mr);
+            allocate_mem(&s_offsets, false, sizeof(int) * n_partitions, stream, mr);
+            // allocate_mem(&r_coarse_offsets, false, sizeof(int) * n_coarse_partitions, stream, mr);
+            // allocate_mem(&s_coarse_offsets, false, sizeof(int) * n_coarse_partitions, stream, mr);
+            allocate_mem(&r_work, false, sizeof(uint64_t) * n_partitions * 2, stream, mr);
+            allocate_mem(&s_work, false, sizeof(uint64_t) * n_partitions * 2, stream, mr);
+            allocate_mem(&rkeys_partitions, false, sizeof(key_t) * (nr + 2048), stream, mr);
+            allocate_mem(&skeys_partitions, false, sizeof(key_t) * (ns + 2048), stream, mr);
+            allocate_mem(&rkeys_partitions_tmp, false, sizeof(key_t) * (nr + 2048), stream, mr);
+            allocate_mem(&skeys_partitions_tmp, false, sizeof(key_t) * (ns + 2048), stream, mr);
+            allocate_mem(&rvals_partitions, false, sizeof(int32_t) * (nr + 2048), stream, mr);
+            allocate_mem(&svals_partitions, false, sizeof(int32_t) * (ns + 2048), stream, mr);
+            allocate_mem(&total_work, true, sizeof(int), stream, mr); // initialized to zero
 
+
+            allocate_mem(&r_match_idx, false, sizeof(int) * circular_buffer_size, stream, mr);
+            allocate_mem(&s_match_idx, false, sizeof(int) * circular_buffer_size, stream, mr);
+        } catch (const std::exception& e) {
+            // Handle any standard exceptions
+            std::cerr << "n_partitions: " << n_partitions << "\n";
+            std::cerr << "nr: " << nr << "\n";
+            std::cerr << "ns: " << ns << "\n";
+            std::cerr <<  "circular_buffer_size: " << circular_buffer_size << "\n";
+            std::cerr << "Exception caught during memory allocation or kernel execution !!!:  " << e.what() << std::endl;
+            //cleanup_resources(); // Free any resources already allocated
+            throw; // Re-throw the exception if necessary
+        } catch (...) {
+            // Catch all other exceptions
+            std::cerr << "Unknown exception caught during memory allocation or kernel execution." << std::endl;
+            //cleanup_resources(); // Free any resources already allocated
+            throw; // Re-throw the exception if necessary
+        }
+
+
+        // Kernel launches with error handling
         fill_sequence<<<num_tb(nr), 1024>>>((int*)(rkeys_partitions_tmp), 0, nr);
+        //CUDA_CHECK(cudaGetLastError()); // Check for kernel launch errors
+
         fill_sequence<<<num_tb(ns), 1024>>>((int*)(skeys_partitions_tmp), 0, ns);
+        //CUDA_CHECK(cudaGetLastError()); // Check for kernel launch errors
 
-        allocate_mem(&r_match_idx, false, sizeof(int)*circular_buffer_size, stream, mr); // 5 Mc used
-        allocate_mem(&s_match_idx, false, sizeof(int)*circular_buffer_size, stream, mr); // 6 Mc Used
-
-        cudaEventCreate(&start);
-        cudaEventCreate(&stop);
     }
 
     static std::unique_ptr<cudf::table> gatherTest() {
@@ -90,14 +111,29 @@ public:
     }
 
     std::pair<std::unique_ptr<rmm::device_uvector<cudf::size_type>>,
-              std::unique_ptr<rmm::device_uvector<cudf::size_type>>> join(rmm::cuda_stream_view stream,
-                                rmm::device_async_resource_ref mr){
-        partition();
-        join_copartitions();
-        auto r_match_uvector = std::make_unique<rmm::device_uvector<cudf::size_type>>(n_matches, stream, mr);
-        auto s_match_uvector = std::make_unique<rmm::device_uvector<cudf::size_type>>(n_matches, stream, mr);
-        copy_device_vector(r_match_uvector, s_match_uvector, r_match_idx, s_match_idx);
-        return std::make_pair(std::move(r_match_uvector), std::move(s_match_uvector));
+              std::unique_ptr<rmm::device_uvector<cudf::size_type>>> join(){
+
+       partition();
+       join_copartitions();
+
+       try{
+            std::cout << "n_matches: " <<  n_matches << "\n";
+            auto    r_match_uvector = std::make_unique<rmm::device_uvector<cudf::size_type>>(n_matches, stream, mr);
+            auto    s_match_uvector = std::make_unique<rmm::device_uvector<cudf::size_type>>(n_matches, stream, mr);
+            copy_device_vector(r_match_uvector, s_match_uvector, r_match_idx, s_match_idx);
+            return std::make_pair(std::move(r_match_uvector), std::move(s_match_uvector));
+       }
+        catch (const std::exception& e) {
+            // Handle any standard exceptions
+            std::cerr << "Exception caught during partition or join kernel execution:3 " << e.what() << std::endl;
+            //cleanup_resources(); // Free any resources already allocated
+            throw; // Re-throw the exception if necessary
+        } catch (...) {
+            // Catch all other exceptions
+            std::cerr << "Unknown exception caught during partition or join kernel execution.3" << std::endl;
+            //cleanup_resources(); // Free any resources already allocated
+            throw; // Re-throw the exception if necessary
+        }
     }
 
     ~SortHashJoinV1() {
@@ -115,8 +151,8 @@ public:
         release_mem(r_match_idx, sizeof(int)*circular_buffer_size, stream, mr);
         release_mem(s_match_idx, sizeof(int)*circular_buffer_size,stream, mr);
 
-        cudaEventDestroy(start);
-        cudaEventDestroy(stop);
+//         cudaEventDestroy(start);
+//         cudaEventDestroy(stop);
     }
 
 public:
@@ -133,32 +169,46 @@ private:
 
     void copy_device_vector(std::unique_ptr<rmm::device_uvector<cudf::size_type>> &r_match_uvector, std::unique_ptr<rmm::device_uvector<cudf::size_type>>& s_match_uvector,
     int*   r_match_idx , int* s_match_idx){
+        try{
+            if (r_match_uvector->data() == nullptr || r_match_idx == nullptr) {
+                std::cerr << "Error: Null pointer detected" << std::endl;
+            }
 
-        if (r_match_uvector->data() == nullptr || r_match_idx == nullptr) {
-            std::cerr << "Error: Null pointer detected" << std::endl;
+            if (n_matches < 0) {
+                std::cerr << "Error: Invalid number of matches: " << n_matches << std::endl;
+            }
+
+            cudaError_t cudaStatus = cudaMemcpy(r_match_uvector->data(), r_match_idx,
+                                                n_matches * sizeof(int), cudaMemcpyDeviceToDevice);
+            if (cudaStatus != cudaSuccess) {
+                std::string errorMsg = "cudaMemcpy failed for r_match_idx: ";
+                errorMsg += cudaGetErrorString(cudaStatus);
+                std::cerr << "CUDA Error: " << errorMsg << std::endl;
+                throw std::runtime_error(errorMsg);
+            }
+
+            cudaStatus = cudaMemcpy(s_match_uvector->data(), s_match_idx,
+                                    n_matches * sizeof(int), cudaMemcpyDeviceToDevice);
+            if (cudaStatus != cudaSuccess) {
+                std::string errorMsg = "cudaMemcpy failed for r_match_idx: ";
+                errorMsg += cudaGetErrorString(cudaStatus);
+                std::cerr << "CUDA Error: " << errorMsg << std::endl;
+                throw std::runtime_error(errorMsg);
+            }
+
+        }
+        catch (const std::exception& e) {
+            // Handle any standard exceptions
+            std::cerr << "Exception caught during partition or join kernel execution:2 " << e.what() << std::endl;
+            //cleanup_resources(); // Free any resources already allocated
+            throw; // Re-throw the exception if necessary
+        } catch (...) {
+            // Catch all other exceptions
+            std::cerr << "Unknown exception caught during partition or join kernel execution.2" << std::endl;
+            //cleanup_resources(); // Free any resources already allocated
+            throw; // Re-throw the exception if necessary
         }
 
-        if (n_matches < 0) {
-            std::cerr << "Error: Invalid number of matches: " << n_matches << std::endl;
-        }
-
-        cudaError_t cudaStatus = cudaMemcpy(r_match_uvector->data(), r_match_idx,
-                                            n_matches * sizeof(int), cudaMemcpyDeviceToDevice);
-        if (cudaStatus != cudaSuccess) {
-            std::string errorMsg = "cudaMemcpy failed for r_match_idx: ";
-            errorMsg += cudaGetErrorString(cudaStatus);
-            std::cerr << "CUDA Error: " << errorMsg << std::endl;
-            throw std::runtime_error(errorMsg);
-        }
-
-        cudaStatus = cudaMemcpy(s_match_uvector->data(), s_match_idx,
-                                n_matches * sizeof(int), cudaMemcpyDeviceToDevice);
-        if (cudaStatus != cudaSuccess) {
-            std::string errorMsg = "cudaMemcpy failed for r_match_idx: ";
-            errorMsg += cudaGetErrorString(cudaStatus);
-            std::cerr << "CUDA Error: " << errorMsg << std::endl;
-            throw std::runtime_error(errorMsg);
-        }
     }
 
     template<typename KeyT, typename ValueT>
@@ -175,7 +225,6 @@ private:
     }
 
     void in_copy(key_t** arr, cudf::table_view table, int index){
-
         cudf::column_view first_column = table.column(index);
         cudf::data_type dtype_r = first_column.type();
         const void* data_ptr_r;
@@ -316,7 +365,4 @@ private:
     key_t*  svals_partitions{nullptr};
     int*   r_match_idx     {nullptr};
     int*   s_match_idx     {nullptr};
-
-    cudaEvent_t start;
-    cudaEvent_t stop;
 };

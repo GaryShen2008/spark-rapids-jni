@@ -36,30 +36,50 @@ inner_join(table_view const& left_input,
   // Following code is copied from cudf join.cu
   // Make sure any dictionary columns have matched key sets.
   // This will return any new dictionary columns created as well as updated table_views.
-  auto matched = cudf::dictionary::detail::match_dictionaries(
-    {left_input, right_input},
-    stream,
-    cudf::get_current_device_resource_ref());  // temporary objects returned
+//   auto matched = cudf::dictionary::detail::match_dictionaries(
+//     {left_input, right_input},
+//     stream,
+//     cudf::get_current_device_resource_ref());  // temporary objects returned
+//
+//   // now rebuild the table views with the updated ones
+//   auto const left      = matched.second.front();
+//   auto const right     = matched.second.back();
+//   auto const has_nulls = cudf::has_nested_nulls(left) || cudf::has_nested_nulls(right)
+//                            ? cudf::nullable_join::YES
+//                            : cudf::nullable_join::NO;
 
-  // now rebuild the table views with the updated ones
-  auto const left      = matched.second.front();
-  auto const right     = matched.second.back();
-  auto const has_nulls = cudf::has_nested_nulls(left) || cudf::has_nested_nulls(right)
-                           ? cudf::nullable_join::YES
-                           : cudf::nullable_join::NO;
-
-  int num_r = left.num_rows();
-  int num_s = right.num_rows();
+  int num_r = left_input.num_rows();
+  int num_s = right_input.num_rows();
   // circular_buffer_size and the radix bits should not set hardcode like this.
   int circular_buffer_size = std::max(num_r, num_s);
-  if(num_s > num_r){
-    SortHashJoinV1 shj(left, right, 0, 15, circular_buffer_size, stream, mr);
-    return shj.join(stream, mr);
-  } else {
-    SortHashJoinV1 shj(right, left, 0, 15, circular_buffer_size, stream, mr);
-    auto [right_result, left_result] = shj.join(stream, mr);
-    return std::pair(std::move(left_result), std::move(right_result));
+  try{
+      if(num_s > num_r){
+        SortHashJoinV1 shj(left_input, right_input, 0, 15, circular_buffer_size, stream, mr);
+        return shj.join();
+      } else {
+        SortHashJoinV1 shj(right_input, left_input, 0, 15, circular_buffer_size, stream, mr);
+        auto [right_result, left_result] = shj.join();
+        return std::pair(std::move(left_result), std::move(right_result));
+      }
+  } catch (const std::exception& e) {
+      // Handle any standard exceptions
+      std::cerr << "Exception caught during SortHashJoinV1 kernel execution: " << e.what() << std::endl;
+      //cleanup_resources(); // Free any resources already allocated
+      throw; // Re-throw the exception if necessary
+  } catch (...) {
+      // Catch all other exceptions
+      std::cerr << "Unknown exception caught during SortHashJoinV1 kernel execution." << std::endl;
+      //cleanup_resources(); // Free any resources already allocated
+      throw; // Re-throw the exception if necessary
   }
+
+//           auto r_match_uvector = std::make_unique<rmm::device_uvector<cudf::size_type>>(2, stream, mr);
+//           auto s_match_uvector = std::make_unique<rmm::device_uvector<cudf::size_type>>(2, stream, mr);
+//           // Set memory to 0 for r_match_uvector
+//           cudaMemsetAsync(r_match_uvector->data(), 0, r_match_uvector->size() * sizeof(cudf::size_type), stream);
+//           // Set memory to 0 for s_match_uvector
+//           cudaMemsetAsync(s_match_uvector->data(), 0, s_match_uvector->size() * sizeof(cudf::size_type), stream);
+//           return std::make_pair(std::move(r_match_uvector), std::move(s_match_uvector));
   //std::cout << "partition time: " << shj.partition_time << std::endl;
   //std::cout << "join time: "<< shj.join_time << std::endl;
   //     std::cout << "copy_device_vector_time: "<< shj.copy_device_vector_time << std::endl;

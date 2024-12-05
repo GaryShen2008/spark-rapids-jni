@@ -189,7 +189,7 @@ public class SortHashJoinTest {
 //        System.out.println(table1.getRowCount());
 //        Table table3 = Table.concatenate(table1, table1);
 //
-//        File file2 = new File("/home/fejiang/Documents/tabler4.csv");
+//        File file2 = new File("/home/fejiang/IdeaProjects/csv/tables.csv");
 //        Table table2 = Table.readCSV(schema, opts, file2);
 //        Table table4 = Table.concatenate(table2, table2);
 //        System.out.println(table2.getRowCount());

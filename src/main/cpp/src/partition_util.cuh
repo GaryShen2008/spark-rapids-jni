@@ -164,7 +164,7 @@ public:
     };
     
     void process() {
-       std::cout << radix_bits;
+       //std::cout << radix_bits;
        if(values == nullptr){
            //TIME_FUNC_ACC(cub::DeviceRadixSort::SortKeys(d_temp_storage, temp_storage_bytes, keys, keys_out, N, begin_bit, end_bit), test_Time);
            cub::DeviceRadixSort::SortKeys(d_temp_storage, temp_storage_bytes, keys, keys_out, N, begin_bit, end_bit);
