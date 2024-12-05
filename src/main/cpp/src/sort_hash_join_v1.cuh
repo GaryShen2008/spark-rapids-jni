@@ -181,8 +181,9 @@ private:
             cudaError_t cudaStatus = cudaMemcpy(r_match_uvector->data(), r_match_idx,
                                                 n_matches * sizeof(int), cudaMemcpyDeviceToDevice);
             if (cudaStatus != cudaSuccess) {
-                std::string errorMsg = "cudaMemcpy failed for r_match_idx: ";
+                std::string errorMsg = "cudaMemcpy failed for r_match_idx.: ";
                 errorMsg += cudaGetErrorString(cudaStatus);
+                errorMsg += n_matches;
                 std::cerr << "CUDA Error: " << errorMsg << std::endl;
                 throw std::runtime_error(errorMsg);
             }
@@ -190,7 +191,7 @@ private:
             cudaStatus = cudaMemcpy(s_match_uvector->data(), s_match_idx,
                                     n_matches * sizeof(int), cudaMemcpyDeviceToDevice);
             if (cudaStatus != cudaSuccess) {
-                std::string errorMsg = "cudaMemcpy failed for r_match_idx: ";
+                std::string errorMsg = "cudaMemcpy failed for s_match_idx.: ";
                 errorMsg += cudaGetErrorString(cudaStatus);
                 std::cerr << "CUDA Error: " << errorMsg << std::endl;
                 throw std::runtime_error(errorMsg);
