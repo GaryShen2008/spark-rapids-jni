@@ -86,26 +86,15 @@ void nvbench_sort_hash_join2(nvbench::state& state, nvbench::type_list<Key, nvbe
   std::cout << "Current allocated bytes3: " << mr.get_allocated_bytes() << std::endl;
 }
 
-NVBENCH_BENCH_TYPES(nvbench_inner_join, NVBENCH_TYPE_AXES(JOIN_KEY_TYPE_RANGE, JOIN_NULLABLE_RANGE))
-  .set_name("inner_join")
-  .set_type_axes_names({"Key", "Nullable"})
-  .add_int64_axis("left_size", JOIN_SIZE_RANGE)
-  .add_int64_axis("right_size", JOIN_SIZE_RANGE);
+// NVBENCH_BENCH_TYPES(nvbench_inner_join, NVBENCH_TYPE_AXES(JOIN_KEY_TYPE_RANGE, JOIN_NULLABLE_RANGE))
+//   .set_name("inner_join")
+//   .set_type_axes_names({"Key", "Nullable"})
+//   .add_int64_axis("left_size", JOIN_SIZE_RANGE)
+//   .add_int64_axis("right_size", JOIN_SIZE_RANGE);
+//
+// NVBENCH_BENCH_TYPES(nvbench_inner_join2, NVBENCH_TYPE_AXES(JOIN_KEY_TYPE_RANGE, JOIN_NULLABLE_RANGE))
+//   .set_name("inner_join2")
+//   .set_type_axes_names({"Key", "Nullable"})
+//   .add_int64_axis("left_size", JOIN_SIZE_RANGE)
+//   .add_int64_axis("right_size", JOIN_SIZE_RANGE);
 
-NVBENCH_BENCH_TYPES(nvbench_inner_join2, NVBENCH_TYPE_AXES(JOIN_KEY_TYPE_RANGE, JOIN_NULLABLE_RANGE))
-  .set_name("inner_join2")
-  .set_type_axes_names({"Key", "Nullable"})
-  .add_int64_axis("left_size", JOIN_SIZE_RANGE)
-  .add_int64_axis("right_size", JOIN_SIZE_RANGE);
-
-NVBENCH_BENCH_TYPES(nvbench_sort_hash_join, NVBENCH_TYPE_AXES(JOIN_KEY_TYPE_RANGE, JOIN_NULLABLE_RANGE))
-  .set_name("inner_join_bucket")
-  .set_type_axes_names({"Key", "Nullable"})
-  .add_int64_axis("left_size", JOIN_SIZE_RANGE)
-  .add_int64_axis("right_size", JOIN_SIZE_RANGE);
-
-NVBENCH_BENCH_TYPES(nvbench_sort_hash_join2, NVBENCH_TYPE_AXES(JOIN_KEY_TYPE_RANGE, JOIN_NULLABLE_RANGE))
-  .set_name("inner_join_bucket2")
-  .set_type_axes_names({"Key", "Nullable"})
-  .add_int64_axis("left_size", JOIN_SIZE_RANGE)
-  .add_int64_axis("right_size", JOIN_SIZE_RANGE);
