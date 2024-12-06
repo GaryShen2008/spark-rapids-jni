@@ -49,7 +49,7 @@ using JOIN_KEY_TYPE_RANGE = nvbench::type_list<nvbench::int32_t>;
 using JOIN_NULLABLE_RANGE = nvbench::enum_type_list<false, true>;
 using tracking_adaptor = rmm::mr::tracking_resource_adaptor<rmm::mr::device_memory_resource>;
 
-auto const JOIN_SIZE_RANGE = std::vector<nvbench::int64_t>{6000, 100'000'000'0};
+auto const JOIN_SIZE_RANGE = std::vector<nvbench::int64_t>{6000, 8820891};
 
 struct null75_generator {
   thrust::minstd_rand engine;
