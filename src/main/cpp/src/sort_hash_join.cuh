@@ -111,11 +111,33 @@ public:
     }
 
     std::pair<std::unique_ptr<rmm::device_uvector<cudf::size_type>>,
-              std::unique_ptr<rmm::device_uvector<cudf::size_type>>> join(rmm::cuda_stream_view stream,
-                                rmm::device_async_resource_ref mr){
+              std::unique_ptr<rmm::device_uvector<cudf::size_type>>> join(){
         TIME_FUNC_ACC(partition(), partition_time);
 //        partition();
         TIME_FUNC_ACC(join_copartitions(), join_time);
+
+        std::cout << "total work:";
+        print_gpu_arr(total_work, 1);
+        std::cout << "n partitions: " << n_partitions << "\n";
+
+        std::cout << "r_work 0 " ;
+        print_gpu_arr(r_work, 1);
+
+        std::cout << "s_work 0 ";
+        print_gpu_arr(s_work, 1);
+
+        std::cout << "r_work 1 " ;
+        print_gpu_arr(r_work + 1, 1);
+
+        std::cout << "s_work 1 ";
+        print_gpu_arr(s_work + 1, 1);
+
+        std::cout << "r_work 500 " ;
+        print_gpu_arr(r_work + 500, 1);
+
+        std::cout << "s_work 500 ";
+        print_gpu_arr(s_work + 500, 1);
+
 //        join_copartitions();
         //TIME_FUNC_ACC(materialize_by_gather(), mat_time);
         //std::cout << "n_matches: " << n_matches << std::endl;

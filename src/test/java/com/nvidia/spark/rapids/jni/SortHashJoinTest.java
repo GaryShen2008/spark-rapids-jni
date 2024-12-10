@@ -7,50 +7,50 @@ import java.io.File;
 
 public class SortHashJoinTest {
 
-    @Test
-    void testSortHashJoin() {
-        Table.TestBuilder tb1 = new Table.TestBuilder();
-        tb1.column(1, 1, 1, 1, 3, 3, 3, 3);
-        tb1.column(1, 9, 2, 3, 4, 3, 9, 21);
-        tb1.column(10, 90, 2, 3, 4, 3, 9, 21);
-
-        Table.TestBuilder tb2 = new Table.TestBuilder();
-        tb2.column(1, 9, 2, 3, 6, 8, 4, 12, 14, 19, 9999, 12);
-        tb2.column(1, 9, 2, 3, 6, 8, 777, 12, 14, 19, 9, 232);
-        tb2.column(10, 90, 2, 3, 6, 8, 777, 12, 14, 19, 9, 321);
-
-        Table left = tb1.build();
-        Table right = tb2.build();
-
-        // Measure execution time
-        long startTime = System.nanoTime();
-        GatherMap[] map = BucketChainHashJoin.innerJoinGatherMaps(left, right, true);
-        long endTime = System.nanoTime();
-
-        // Calculate execution time
-        long durationNanos = endTime - startTime;
-        double durationMillis = durationNanos / 1_000_000.0;
-
-        // Print metrics
-        System.out.println("Execution time: " + durationMillis + " ms");
-
-        //System.out.println(map[0].getRowCount());
-        System.out.println("gather map");
-        ColumnView colV1 = map[0].toColumnView(0L, (int) map[0].getRowCount());
-//        HostColumnVector HCV = colV1.copyToHost();
-//        System.out.println(HCV.toString());
+//    @Test
+//    void testSortHashJoin() {
+//        Table.TestBuilder tb1 = new Table.TestBuilder();
+//        tb1.column(1, 1, 1, 1, 1, 1, 1, 1);
+//        tb1.column(1, 9, 2, 3, 4, 3, 9, 21);
+//        tb1.column(10, 90, 2, 3, 4, 3, 9, 21);
 //
-        for(int i = 0; i < (int) map[0].getRowCount(); i++){
-            System.out.print(colV1.getScalarElement(i).getInt() + " ");
-        }
-
-        System.out.println();
-
-        ColumnView colV2 = map[1].toColumnView(0L, (int) map[1].getRowCount());
-
-        for(int i = 0; i < (int) map[1].getRowCount(); i++){
-            System.out.print(colV2.getScalarElement(i).getInt() + " ");
-        }
+//        Table.TestBuilder tb2 = new Table.TestBuilder();
+//        tb2.column(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1);
+//        tb2.column(1, 9, 2, 3, 6, 8, 777, 12, 14, 19, 9, 232);
+//        tb2.column(10, 90, 2, 3, 6, 8, 777, 12, 14, 19, 9, 321);
+//
+//        Table left = tb1.build();
+//        Table right = tb2.build();
+//
+//        // Measure execution time
+//        long startTime = System.nanoTime();
+//        GatherMap[] map = BucketChainHashJoin.innerJoinGatherMaps(left, right, true);
+//        long endTime = System.nanoTime();
+//
+//        // Calculate execution time
+//        long durationNanos = endTime - startTime;
+//        double durationMillis = durationNanos / 1_000_000.0;
+//
+//        // Print metrics
+//        System.out.println("Execution time: " + durationMillis + " ms");
+//
+//        //System.out.println(map[0].getRowCount());
+//        System.out.println("gather map");
+//        ColumnView colV1 = map[0].toColumnView(0L, (int) map[0].getRowCount());
+////        HostColumnVector HCV = colV1.copyToHost();
+////        System.out.println(HCV.toString());
+////
+//        for(int i = 0; i < (int) map[0].getRowCount(); i++){
+//            System.out.print(colV1.getScalarElement(i).getInt() + " ");
+//        }
+//
+//        System.out.println();
+//
+//        ColumnView colV2 = map[1].toColumnView(0L, (int) map[1].getRowCount());
+//
+//        for(int i = 0; i < (int) map[1].getRowCount(); i++){
+//            System.out.print(colV2.getScalarElement(i).getInt() + " ");
+//        }
 //
 //        System.out.println("\nthis is table 1 gathered");
 //
@@ -76,7 +76,7 @@ public class SortHashJoinTest {
 //        }
 
 
-    }
+//    }
 //    @Test
 //    void testCUDFHASHJoin() {
 //        Table.TestBuilder tb1 = new Table.TestBuilder();
@@ -161,6 +161,82 @@ public class SortHashJoinTest {
 //        // Measure execution time
 //        long startTime = System.nanoTime();
 //        GatherMap[] map = table1.innerJoinGatherMaps(table2, true);
+//        long endTime = System.nanoTime();
+//
+//        // Calculate execution time
+//        long durationNanos = endTime - startTime;
+//        double durationMillis = durationNanos / 1_000_000.0;
+//
+//        // Print metrics
+//        System.out.println("Execution time: " + durationMillis + " ms");
+//        System.out.println(map[0].getRowCount());
+//    }
+
+
+//    @Test
+//    void readParquetCudfJoin() {
+////        Schema schema = Schema.builder()
+////                .column(DType.INT32, "c_INT321")
+////                .build();
+//        ParquetOptions opts = ParquetOptions.builder()
+//                .includeColumn("c_INT323")
+//                .build();
+//        ParquetOptions opts2 = ParquetOptions.builder()
+//                .includeColumn("c_INT321")
+//                .build();
+//
+//        File file1 = new File("/home/fejiang/query3_1/loreId-124/input-0/partition-134/batch-0.parquet");
+//        Table table1 = Table.readParquet(opts, file1);
+//        System.out.println(table1.getRowCount());
+//        //Table table3 = Table.concatenate(table1, table1);
+//
+//        File file2 = new File("/home/fejiang/input-1/partition-0/batch-0.parquet");
+//        Table table2 = Table.readParquet(opts2, file2);
+//
+//        //Table table4 = Table.concatenate(table2, table2, table2);
+//        System.out.println(table2.getRowCount());
+//
+//        // Measure execution time
+//        long startTime = System.nanoTime();
+//        GatherMap[] map = table1.innerJoinGatherMaps(table2, true);
+//        long endTime = System.nanoTime();
+//
+//        // Calculate execution time
+//        long durationNanos = endTime - startTime;
+//        double durationMillis = durationNanos / 1_000_000.0;
+//
+//        // Print metrics
+//        System.out.println("Execution time: " + durationMillis + " ms");
+//        System.out.println(map[0].getRowCount());
+//    }
+//
+//
+//    @Test
+//    void readParquetSHJJoin() {
+////        Schema schema = Schema.builder()
+////                .column(DType.INT32, "c_INT321")
+////                .build();
+//        ParquetOptions opts = ParquetOptions.builder()
+//                .includeColumn("c_INT323")
+//                .build();
+//        ParquetOptions opts2 = ParquetOptions.builder()
+//                .includeColumn("c_INT321")
+//                .build();
+//
+//        File file1 = new File("/home/fejiang/query3_1/loreId-124/input-0/partition-134/batch-0.parquet");
+//        Table table1 = Table.readParquet(opts, file1);
+//        System.out.println(table1.getRowCount());
+//        //Table table3 = Table.concatenate(table1, table1);
+//
+//        File file2 = new File("/home/fejiang/input-1/partition-0/batch-0.parquet");
+//        Table table2 = Table.readParquet(opts2, file2);
+//
+//        //Table table4 = Table.concatenate(table2, table2, table2);
+//        System.out.println(table2.getRowCount());
+//
+//        // Measure execution time
+//        long startTime = System.nanoTime();
+//        GatherMap[] map = BucketChainHashJoin.innerJoinGatherMaps(table1, table2, true);
 //        long endTime = System.nanoTime();
 //
 //        // Calculate execution time

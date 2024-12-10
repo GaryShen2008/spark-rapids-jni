@@ -66,9 +66,9 @@ public:
             allocate_mem(&svals_partitions, false, sizeof(int32_t) * (ns + 2048), stream, mr);
             allocate_mem(&total_work, true, sizeof(int), stream, mr); // initialized to zero
 
+          allocate_mem(&r_match_idx, false, sizeof(int) * circular_buffer_size, stream, mr);
+          allocate_mem(&s_match_idx, false, sizeof(int) * circular_buffer_size, stream, mr);
 
-            allocate_mem(&r_match_idx, false, sizeof(int) * circular_buffer_size, stream, mr);
-            allocate_mem(&s_match_idx, false, sizeof(int) * circular_buffer_size, stream, mr);
         } catch (const std::exception& e) {
             // Handle any standard exceptions
             std::cerr << "n_partitions: " << n_partitions << "\n";
@@ -116,8 +116,14 @@ public:
        partition();
        join_copartitions();
 
+       ///std::cout << "n_matches: " << n_matches << "\n";
+//        print_gpu_arr(r_match_idx, n_matches);
+//        print_gpu_arr(s_match_idx, n_matches);
+
+      //join_copartitions();
+
        try{
-            std::cout << "n_matches: " <<  n_matches << "\n";
+            //std::cout << "n_matches: " <<  n_matches << "\n";
             auto    r_match_uvector = std::make_unique<rmm::device_uvector<cudf::size_type>>(n_matches, stream, mr);
             auto    s_match_uvector = std::make_unique<rmm::device_uvector<cudf::size_type>>(n_matches, stream, mr);
             copy_device_vector(r_match_uvector, s_match_uvector, r_match_idx, s_match_idx);
@@ -252,7 +258,8 @@ private:
         in_copy(&skeys, s, 0);
         //in_copy(&rvals, r, 0);
         //in_copy(&svals, s, 0);
-
+        //print_gpu_arr(rkeys, nr);
+        //print_gpu_arr(skeys, nr);
         partition_pairs(rkeys, (key_t*)nullptr, rkeys_partitions, (key_t*)rvals_partitions, r_coarse_offsets, nr);
         partition_pairs(skeys, (key_t*)nullptr, skeys_partitions, (key_t*)svals_partitions, s_coarse_offsets, ns);
 
@@ -274,7 +281,29 @@ private:
         //print_gpu_arr(r_offsets, (size_t) n_partitions);
 
 
-        generate_work_units<<<num_tb(n_partitions,512),512>>>(s_offsets, r_offsets, s_work, r_work, total_work, n_partitions, threshold);
+        generate_work_units<<<num_tb(n_partitions,512),512>>>(r_offsets, s_offsets, r_work, s_work, total_work, n_partitions, threshold);
+//         std::cout << "total work:";
+//         print_gpu_arr(total_work, 1);
+//         std::cout << "n partitions: " << n_partitions << "\n";
+//
+//         std::cout << "r_work 0 " ;
+//         print_gpu_arr(r_work, 1);
+//
+//         std::cout << "s_work 0 ";
+//         print_gpu_arr(s_work, 1);
+//
+//         std::cout << "r_work 1 " ;
+//         print_gpu_arr(r_work + 1, 1);
+//
+//         std::cout << "s_work 1 ";
+//         print_gpu_arr(s_work + 1, 1);
+//
+//         std::cout << "r_work 500 " ;
+//         print_gpu_arr(r_work + 500, 1);
+//
+//         std::cout << "s_work 500 ";
+//         print_gpu_arr(s_work + 500, 1);
+
         // Peek Mt + 4Mc
         // Used mem after exit = 4 Mc
         //print_gpu_arr(r_offsets, (size_t) n_partitions);

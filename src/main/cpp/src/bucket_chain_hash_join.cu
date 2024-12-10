@@ -16,6 +16,7 @@
 #include <memory>
 
 #include "sort_hash_join_v1.cuh"
+#include "sort_hash_join.cuh"
 #include "sort_hash_gather.cuh"
 #include "partitioned_hash_join.cuh"
 #include "bucket_chain_hash_join.hpp"
@@ -52,6 +53,7 @@ inner_join(table_view const& left_input,
   int num_s = right_input.num_rows();
   // circular_buffer_size and the radix bits should not set hardcode like this.
   int circular_buffer_size = std::max(num_r, num_s);
+  //int circular_buffer_size = num_r * num_s;
   try{
       if(num_s > num_r){
         SortHashJoinV1 shj(left_input, right_input, 0, 15, circular_buffer_size, stream, mr);
