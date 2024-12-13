@@ -32,7 +32,7 @@
 class SortHashJoinV1 {
 
 public:
-    explicit SortHashJoinV1(cudf::table_view r_in, cudf::table_view s_in, int first_bit,  int radix_bits, int circular_buffer_size, rmm::cuda_stream_view stream, rmm::device_async_resource_ref mr)
+    explicit SortHashJoinV1(cudf::table_view const& r_in, cudf::table_view const& s_in, int first_bit,  int radix_bits, long circular_buffer_size, rmm::cuda_stream_view stream, rmm::device_async_resource_ref mr)
     : r(r_in)
     , s(s_in)
     , first_bit(first_bit)
@@ -51,23 +51,29 @@ public:
 
         try {
             // Memory allocations with error handling
-            allocate_mem(&d_n_matches, true, sizeof(unsigned long long int), stream, mr);
-            allocate_mem(&r_offsets, false, sizeof(int) * n_partitions, stream, mr);
-            allocate_mem(&s_offsets, false, sizeof(int) * n_partitions, stream, mr);
-            // allocate_mem(&r_coarse_offsets, false, sizeof(int) * n_coarse_partitions, stream, mr);
-            // allocate_mem(&s_coarse_offsets, false, sizeof(int) * n_coarse_partitions, stream, mr);
-            allocate_mem(&r_work, false, sizeof(uint64_t) * n_partitions * 2, stream, mr);
-            allocate_mem(&s_work, false, sizeof(uint64_t) * n_partitions * 2, stream, mr);
-            allocate_mem(&rkeys_partitions, false, sizeof(key_t) * (nr + 2048), stream, mr);
-            allocate_mem(&skeys_partitions, false, sizeof(key_t) * (ns + 2048), stream, mr);
-            allocate_mem(&rkeys_partitions_tmp, false, sizeof(key_t) * (nr + 2048), stream, mr);
-            allocate_mem(&skeys_partitions_tmp, false, sizeof(key_t) * (ns + 2048), stream, mr);
-            allocate_mem(&rvals_partitions, false, sizeof(int32_t) * (nr + 2048), stream, mr);
-            allocate_mem(&svals_partitions, false, sizeof(int32_t) * (ns + 2048), stream, mr);
-            allocate_mem(&total_work, true, sizeof(int), stream, mr); // initialized to zero
+            d_n_matches = static_cast<unsigned long long *>(mr.allocate_async(sizeof(unsigned long long int), stream));
+            CHECK_CUDA_ERROR(cudaMemsetAsync(d_n_matches, 0, sizeof(unsigned long long int), stream));
 
-          allocate_mem(&r_match_idx, false, sizeof(int) * circular_buffer_size, stream, mr);
-          allocate_mem(&s_match_idx, false, sizeof(int) * circular_buffer_size, stream, mr);
+            r_offsets = static_cast<int*>(mr.allocate_async(sizeof(int) * n_partitions, stream));
+            s_offsets = static_cast<int*>(mr.allocate_async(sizeof(int) * n_partitions, stream));
+
+            r_work = static_cast<uint64_t *>(mr.allocate_async(sizeof(uint64_t)* n_partitions * 2, stream));
+            s_work = static_cast<uint64_t *>(mr.allocate_async(sizeof(uint64_t)* n_partitions * 2, stream));
+
+            rkeys_partitions = static_cast<key_t *>(mr.allocate_async(sizeof(key_t)* (nr + 2048), stream));
+            skeys_partitions = static_cast<key_t *>(mr.allocate_async(sizeof(key_t)* (ns + 2048), stream));
+
+            rkeys_partitions_tmp = static_cast<key_t *>(mr.allocate_async(sizeof(key_t)* (nr + 2048), stream));
+            skeys_partitions_tmp = static_cast<key_t *>(mr.allocate_async(sizeof(key_t)* (ns + 2048), stream));
+
+            rvals_partitions = static_cast<int32_t *>(mr.allocate_async(sizeof(int32_t)* (nr + 2048), stream));
+            svals_partitions = static_cast<int32_t *>(mr.allocate_async(sizeof(int32_t)* (ns + 2048), stream));
+            total_work = static_cast<int *>(mr.allocate_async(sizeof(int), stream));
+            CHECK_CUDA_ERROR(cudaMemsetAsync(total_work, 0, sizeof(int), stream));
+
+            r_match_idx = static_cast<int *>(mr.allocate_async(sizeof(int) * circular_buffer_size, stream));
+            s_match_idx = static_cast<int *>(mr.allocate_async(sizeof(int) * circular_buffer_size, stream));
+
 
         } catch (const std::exception& e) {
             // Handle any standard exceptions
@@ -116,7 +122,7 @@ public:
        partition();
        join_copartitions();
 
-       ///std::cout << "n_matches: " << n_matches << "\n";
+       std::cout << "n_matches: " << n_matches << "\n";
 //        print_gpu_arr(r_match_idx, n_matches);
 //        print_gpu_arr(s_match_idx, n_matches);
 
@@ -143,19 +149,33 @@ public:
     }
 
     ~SortHashJoinV1() {
-        release_mem(d_n_matches, sizeof(unsigned long long int), stream, mr);
-        release_mem(r_offsets, sizeof(int) * n_partitions, stream, mr);
-        release_mem(s_offsets, sizeof(int) * n_partitions, stream, mr);
-        release_mem(r_work, sizeof(uint64_t)*n_partitions*2, stream, mr);
-        release_mem(s_work, sizeof(uint64_t)*n_partitions*2, stream, mr);
-        release_mem(rkeys_partitions, sizeof(key_t)*(nr+2048), stream, mr);
-        release_mem(skeys_partitions, sizeof(key_t)*(ns+2048), stream, mr);
-        release_mem(rvals_partitions, sizeof(key_t)*(nr+2048), stream, mr);
-        release_mem(svals_partitions, sizeof(key_t)*(ns+2048), stream, mr);
-        release_mem(total_work, sizeof(int), stream, mr);
+        mr.deallocate_async(d_n_matches, sizeof(unsigned long long int), stream);
+        mr.deallocate_async(r_offsets, sizeof(int)* n_partitions, stream);
+        mr.deallocate_async(s_offsets, sizeof(int)* n_partitions, stream);
+        mr.deallocate_async(r_work, sizeof(uint64_t)* n_partitions * 2, stream);
+        mr.deallocate_async(s_work, sizeof(uint64_t)* n_partitions*2, stream);
+        mr.deallocate_async(rkeys_partitions, sizeof(key_t)*(nr+2048), stream);
+        mr.deallocate_async(skeys_partitions, sizeof(key_t)*(ns+2048), stream);
+        mr.deallocate_async(rvals_partitions, sizeof(key_t)*(nr+2048), stream);
+        mr.deallocate_async(svals_partitions, sizeof(key_t)*(ns+2048), stream);
+        mr.deallocate_async(total_work, sizeof(int), stream);
+        mr.deallocate_async(r_match_idx, sizeof(int) * circular_buffer_size, stream);
+        mr.deallocate_async(s_match_idx, sizeof(int) * circular_buffer_size, stream);
 
-        release_mem(r_match_idx, sizeof(int)*circular_buffer_size, stream, mr);
-        release_mem(s_match_idx, sizeof(int)*circular_buffer_size,stream, mr);
+
+//         release_mem(d_n_matches, sizeof(unsigned long long int), stream, mr);
+//         release_mem(r_offsets, sizeof(int) * n_partitions, stream, mr);
+//         release_mem(s_offsets, sizeof(int) * n_partitions, stream, mr);
+//         release_mem(r_work, sizeof(uint64_t)*n_partitions*2, stream, mr);
+//         release_mem(s_work, sizeof(uint64_t)*n_partitions*2, stream, mr);
+//         release_mem(rkeys_partitions, sizeof(key_t)*(nr+2048), stream, mr);
+//         release_mem(skeys_partitions, sizeof(key_t)*(ns+2048), stream, mr);
+//         release_mem(rvals_partitions, sizeof(key_t)*(nr+2048), stream, mr);
+//         release_mem(svals_partitions, sizeof(key_t)*(ns+2048), stream, mr);
+//         release_mem(total_work, sizeof(int), stream, mr);
+//
+//         release_mem(r_match_idx, sizeof(int)*circular_buffer_size, stream, mr);
+//         release_mem(s_match_idx, sizeof(int)*circular_buffer_size,stream, mr);
 
 //         cudaEventDestroy(start);
 //         cudaEventDestroy(stop);
@@ -248,7 +268,7 @@ private:
 
 
     void partition() {
-
+        //cudf::column_view
         key_t* rkeys  {nullptr};
         key_t* skeys  {nullptr};
 
@@ -282,6 +302,9 @@ private:
 
 
         generate_work_units<<<num_tb(n_partitions,512),512>>>(r_offsets, s_offsets, r_work, s_work, total_work, n_partitions, threshold);
+        int total;
+        cudaMemcpy(&total, total_work, sizeof(total), cudaMemcpyDeviceToHost);
+        std::cout << "total work: " << total << "\n";
 //         std::cout << "total work:";
 //         print_gpu_arr(total_work, 1);
 //         std::cout << "n partitions: " << n_partitions << "\n";
@@ -372,7 +395,7 @@ private:
     int nr;
     int ns;
     unsigned long long int n_matches = 2;
-    int circular_buffer_size;
+    long circular_buffer_size;
     int first_bit;
     int n_partitions;
     int n_coarse_partitions;

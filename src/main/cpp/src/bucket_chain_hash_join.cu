@@ -49,11 +49,11 @@ inner_join(table_view const& left_input,
 //                            ? cudf::nullable_join::YES
 //                            : cudf::nullable_join::NO;
 
-  int num_r = left_input.num_rows();
-  int num_s = right_input.num_rows();
+  long num_r = left_input.num_rows();
+  long num_s = right_input.num_rows();
   // circular_buffer_size and the radix bits should not set hardcode like this.
   int circular_buffer_size = std::max(num_r, num_s);
-  //int circular_buffer_size = num_r * num_s;
+  //long circular_buffer_size = num_r * num_s;
   try{
       if(num_s > num_r){
         SortHashJoinV1 shj(left_input, right_input, 0, 15, circular_buffer_size, stream, mr);

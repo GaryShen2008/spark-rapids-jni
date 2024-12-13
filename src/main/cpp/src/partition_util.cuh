@@ -472,7 +472,7 @@ __global__ void join_copartitions_arr_v1(const KeyT* R,
                                       unsigned long long int*        results,
                                       ValT*       r_output,
                                       ValT*       s_output,
-                                      const int   circular_buffer_size) {
+                                      const long   circular_buffer_size) {
     constexpr int LOCAL_BUCKETS = (1 << LOCAL_BUCKETS_BITS);
 
     extern __shared__ int16_t temp[];
