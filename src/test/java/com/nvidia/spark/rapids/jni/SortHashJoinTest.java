@@ -248,56 +248,56 @@ public class SortHashJoinTest {
 //        System.out.println(map[0].getRowCount());
 //    }
 //
-    @Test
-    void readCSVPartitionHashJoin() {
-
-        Schema schema = Schema.builder()
-                .column(DType.INT32, "key")
-                .column(DType.INT32, "col1")
-                .build();
-        CSVOptions opts = CSVOptions.builder()
-                .includeColumn("key")
-                //.includeColumn("col1")
-                .hasHeader()
-                .build();
-        File file1 = new File("/home/fejiang/IdeaProjects/csv/tabler.csv");
-        Table table1 = Table.readCSV(schema, opts, file1);
-        System.out.println(table1.getRowCount());
-        //Table table3 = Table.concatenate(table1, table1);
-
-        File file2 = new File("/home/fejiang/IdeaProjects/csv/tables.csv");
-        Table table2 = Table.readCSV(schema, opts, file2);
-        //Table table4 = Table.concatenate(table2, table2);
-        System.out.println(table2.getRowCount());
-
-        // Measure execution time
-        long startTime = System.nanoTime();
-        GatherMap[] map = BucketChainHashJoin.innerJoinGatherMaps(table1, table2, true);
-
-
-
-        ColumnView colV1 = map[0].toColumnView(0L, (int) map[0].getRowCount());
-
-
-        ColumnView colV2 = map[1].toColumnView(0L, (int) map[1].getRowCount());
-
-
-        System.out.println("\nthis is table 1 gathered");
-
-        Table result = table1.gather(colV1);
-
-        System.out.println("\nthis is table 2 gathered");
-        Table result2 = table2.gather(colV2);
-
-        long endTime = System.nanoTime();
-
-        // Calculate execution time
-        long durationNanos = endTime - startTime;
-        double durationMillis = durationNanos / 1_000_000.0;
-
-        // Print metrics
-        System.out.println("Execution time: " + durationMillis + " ms");
-
-    }
+//    @Test
+//    void readCSVPartitionHashJoin() {
+//
+//        Schema schema = Schema.builder()
+//                .column(DType.INT32, "key")
+//                .column(DType.INT32, "col1")
+//                .build();
+//        CSVOptions opts = CSVOptions.builder()
+//                .includeColumn("key")
+//                //.includeColumn("col1")
+//                .hasHeader()
+//                .build();
+//        File file1 = new File("/home/fejiang/IdeaProjects/csv/tabler.csv");
+//        Table table1 = Table.readCSV(schema, opts, file1);
+//        System.out.println(table1.getRowCount());
+//        //Table table3 = Table.concatenate(table1, table1);
+//
+//        File file2 = new File("/home/fejiang/IdeaProjects/csv/tables.csv");
+//        Table table2 = Table.readCSV(schema, opts, file2);
+//        //Table table4 = Table.concatenate(table2, table2);
+//        System.out.println(table2.getRowCount());
+//
+//        // Measure execution time
+//        long startTime = System.nanoTime();
+//        GatherMap[] map = BucketChainHashJoin.innerJoinGatherMaps(table1, table2, true);
+//
+//
+//
+//        ColumnView colV1 = map[0].toColumnView(0L, (int) map[0].getRowCount());
+//
+//
+//        ColumnView colV2 = map[1].toColumnView(0L, (int) map[1].getRowCount());
+//
+//
+//        System.out.println("\nthis is table 1 gathered");
+//
+//        Table result = table1.gather(colV1);
+//
+//        System.out.println("\nthis is table 2 gathered");
+//        Table result2 = table2.gather(colV2);
+//
+//        long endTime = System.nanoTime();
+//
+//        // Calculate execution time
+//        long durationNanos = endTime - startTime;
+//        double durationMillis = durationNanos / 1_000_000.0;
+//
+//        // Print metrics
+//        System.out.println("Execution time: " + durationMillis + " ms");
+//
+//    }
 
 }

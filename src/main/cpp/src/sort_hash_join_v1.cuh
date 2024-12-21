@@ -273,9 +273,30 @@ private:
         key_t* skeys  {nullptr};
 
 //         key_t* rvals  {nullptr};
-//         key_t* svals  {nullptr};
-        in_copy(&rkeys, r, 0);
-        in_copy(&skeys, s, 0);
+// //         key_t* svals  {nullptr};
+//         in_copy(&rkeys, r, 0);
+//         in_copy(&skeys, s, 0);
+
+        cudf::column_view key_column_r = r.column(0);
+        cudf::data_type dtype_r = key_column_r.type();
+
+        if(dtype_r.id() == cudf::type_id::INT32){
+            rkeys = static_cast<key_t*>(key_column_r.data<int32_t>());
+        }else {
+            // Handle other data types or throw an error if INT32 is required
+            throw std::runtime_error("R key type not supported");
+        }
+
+        cudf::column_view key_column_s = s.column(0);
+        cudf::data_type dtype_s = key_column_s.type();
+
+        if(dtype_s.id() == cudf::type_id::INT32){
+            skeys = static_cast<key_t*>key_column_s.data<int32_t>());
+        }else {
+            // Handle other data types or throw an error if INT32 is required
+            throw std::runtime_error("R key type not supported");
+        }
+
         //in_copy(&rvals, r, 0);
         //in_copy(&svals, s, 0);
         //print_gpu_arr(rkeys, nr);
