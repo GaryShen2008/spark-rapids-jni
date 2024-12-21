@@ -170,8 +170,7 @@ public:
            cub::DeviceRadixSort::SortKeys(d_temp_storage, temp_storage_bytes, keys, keys_out, N, begin_bit, end_bit);
        }
        else {
-
-          (d_temp_storage, temp_storage_bytes, keys, keys_out, values, values_out, N, begin_bit, end_bit);
+           cub::DeviceRadixSort::SortPairs(d_temp_storage, temp_storage_bytes, keys, keys_out, values, values_out, N, begin_bit, end_bit);
        }
        if(offsets) {
            RadixExtractor<key_t> conversion_op(begin_bit, end_bit);
