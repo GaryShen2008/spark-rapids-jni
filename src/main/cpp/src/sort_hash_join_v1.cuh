@@ -41,6 +41,8 @@ public:
     , stream(stream)
     , mr(mr)
     {
+
+        std::cout << "n_matches: ";
         nr = static_cast<int>(r.num_rows());
         ns = static_cast<int>(s.num_rows());
 
