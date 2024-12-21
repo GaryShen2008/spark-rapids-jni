@@ -246,36 +246,30 @@ private:
                         int*      offsets,
                         const int num_items) {
         // offsets array to store offsets for each partition
-        // num_items: number of key-value pairs to partition
         SinglePassPartition<KeyT, ValueT, int> ssp(keys, values, keys_out, values_out, offsets, num_items, first_bit, radix_bits, stream, mr);
         ssp.process();
     }
 
-    void in_copy(key_t** arr, cudf::table_view table, int index){
-        cudf::column_view first_column = table.column(index);
-        cudf::data_type dtype_r = first_column.type();
-        const void* data_ptr_r;
-        if (dtype_r.id() == cudf::type_id::INT32) {
-            // The column type is INT32
-            data_ptr_r = static_cast<const void*>(first_column.data<int32_t>());
-            // Proceed with your INT32-specific logic here
-        } else {
-            // Handle other data types or throw an error if INT32 is required
-             throw std::runtime_error("R key type not supported");
-        }
-        *arr = const_cast<key_t*>(reinterpret_cast<const key_t*>(data_ptr_r));
-    }
+//     void in_copy(key_t** arr, cudf::table_view table, int index){
+//         cudf::column_view first_column = table.column(index);
+//         cudf::data_type dtype_r = first_column.type();
+//         const void* data_ptr_r;
+//         if (dtype_r.id() == cudf::type_id::INT32) {
+//             // The column type is INT32
+//             data_ptr_r = static_cast<const void*>(first_column.data<int32_t>());
+//             // Proceed with your INT32-specific logic here
+//         } else {
+//             // Handle other data types or throw an error if INT32 is required
+//              throw std::runtime_error("R key type not supported");
+//         }
+//         *arr = const_cast<key_t*>(reinterpret_cast<const key_t*>(data_ptr_r));
+//     }
 
 
     void partition() {
-        //cudf::column_view
+
         key_t* rkeys  {nullptr};
         key_t* skeys  {nullptr};
-
-//         key_t* rvals  {nullptr};
-// //         key_t* svals  {nullptr};
-//         in_copy(&rkeys, r, 0);
-//         in_copy(&skeys, s, 0);
 
         cudf::column_view key_column_r = r.column(0);
         cudf::data_type dtype_r = key_column_r.type();
@@ -297,10 +291,6 @@ private:
             throw std::runtime_error("R key type not supported");
         }
 
-        //in_copy(&rvals, r, 0);
-        //in_copy(&svals, s, 0);
-        //print_gpu_arr(rkeys, nr);
-        //print_gpu_arr(skeys, nr);
         partition_pairs(rkeys, (key_t*)nullptr, rkeys_partitions, (key_t*)rvals_partitions, r_coarse_offsets, nr);
         partition_pairs(skeys, (key_t*)nullptr, skeys_partitions, (key_t*)svals_partitions, s_coarse_offsets, ns);
 
@@ -318,8 +308,6 @@ private:
 //                         rkeys_partitions, (key_t*)rvals_partitions,
 //                         r_offsets, nr), partition_pair1);
 
-        // Peek Mt + 2Mc
-        //print_gpu_arr(r_offsets, (size_t) n_partitions);
 
 
         generate_work_units<<<num_tb(n_partitions,512),512>>>(r_offsets, s_offsets, r_work, s_work, total_work, n_partitions, threshold);
