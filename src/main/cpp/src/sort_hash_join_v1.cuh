@@ -281,7 +281,7 @@ private:
         cudf::data_type dtype_r = key_column_r.type();
 
         if(dtype_r.id() == cudf::type_id::INT32){
-            rkeys = const_cast<key_t*>(key_column_r.data<int32_t>());
+            rkeys =   const_cast<key_t*>(key_column_r.data<int32_t>());
         }else {
             // Handle other data types or throw an error if INT32 is required
             throw std::runtime_error("R key type not supported");
