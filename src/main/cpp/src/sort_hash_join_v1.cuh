@@ -41,8 +41,6 @@ public:
     , stream(stream)
     , mr(mr)
     {
-
-        std::cout << "n_matches: ";
         nr = static_cast<int>(r.num_rows());
         ns = static_cast<int>(s.num_rows());
 
@@ -124,7 +122,7 @@ public:
        partition();
        join_copartitions();
 
-       std::cout << "n_matches: " << n_matches << "\n";
+       //std::cout << "n_matches: " << n_matches << "\n";
 //        print_gpu_arr(r_match_idx, n_matches);
 //        print_gpu_arr(s_match_idx, n_matches);
 
@@ -315,7 +313,7 @@ private:
         generate_work_units<<<num_tb(n_partitions,512),512>>>(r_offsets, s_offsets, r_work, s_work, total_work, n_partitions, threshold);
         int total;
         cudaMemcpy(&total, total_work, sizeof(total), cudaMemcpyDeviceToHost);
-        std::cout << "total work: " << total << "\n";
+        //std::cout << "total work: " << total << "\n";
 //         std::cout << "total work:";
 //         print_gpu_arr(total_work, 1);
 //         std::cout << "n partitions: " << n_partitions << "\n";
