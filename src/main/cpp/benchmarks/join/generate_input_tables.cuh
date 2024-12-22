@@ -44,7 +44,7 @@ CUDF_KERNEL void init_curand(curandState* state, int const nstates)
 template <typename key_type, typename size_type>
 CUDF_KERNEL void init_build_tbl(key_type* const build_tbl,
                                 size_type const build_tbl_size,
-                                double const multiplicity,
+                                int const multiplicity,
                                 curandState* state,
                                 int const num_states)
 {
@@ -71,7 +71,7 @@ CUDF_KERNEL void init_probe_tbl(key_type* const probe_tbl,
                                 size_type const build_tbl_size,
                                 key_type const rand_max,
                                 double const selectivity,
-                                double const multiplicity,
+                                int const multiplicity,
                                 curandState* state,
                                 int const num_states)
 {
@@ -90,12 +90,12 @@ CUDF_KERNEL void init_probe_tbl(key_type* const probe_tbl,
       // x <= selectivity means this key in the probe table should be present in the build table, so
       // we pick a key from [0, build_tbl_size / multiplicity]
       x   = curand_uniform_double(&localState);
-      val = static_cast<key_type>(x * (build_tbl_size / multiplicity));
+      val = static_cast<key_type>(x * (rand_max));
     } else {
       // This key in the probe table should not be present in the build table, so we pick a key from
       // [build_tbl_size, rand_max].
       x   = curand_uniform_double(&localState);
-      val = static_cast<key_type>(x * (rand_max - build_tbl_size) + build_tbl_size);
+      val = static_cast<key_type>(x * (rand_max ));
     }
     probe_tbl[idx] = val;
   }
@@ -133,7 +133,7 @@ void generate_input_tables(key_type* const build_tbl,
                            key_type* const probe_tbl,
                            size_type const probe_tbl_size,
                            double const selectivity,
-                           double const multiplicity)
+                           int const multiplicity)
 {
   // With large values of rand_max the a lot of temporary storage is needed for the lottery. At the
   // expense of not being that accurate with applying the selectivity an especially more memory
