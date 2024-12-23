@@ -59,7 +59,7 @@ CUDF_KERNEL void init_build_tbl(key_type* const build_tbl,
     auto const idx = static_cast<size_type>(tidx);
     double const x = curand_uniform_double(&localState);
 
-    build_tbl[idx] = static_cast<key_type>(x * (rand_max));
+    build_tbl[idx] = static_cast<key_type>(x * (build_tbl_size / multiplicity));
   }
 
   state[start_idx] = localState;
@@ -90,12 +90,12 @@ CUDF_KERNEL void init_probe_tbl(key_type* const probe_tbl,
       // x <= selectivity means this key in the probe table should be present in the build table, so
       // we pick a key from [0, build_tbl_size / multiplicity]
       x   = curand_uniform_double(&localState);
-      val = static_cast<key_type>(x * (rand_max));
+      val = static_cast<key_type>(x * (build_tbl_size / multiplicity));
     } else {
       // This key in the probe table should not be present in the build table, so we pick a key from
       // [build_tbl_size, rand_max].
       x   = curand_uniform_double(&localState);
-      val = static_cast<key_type>(x * (rand_max ));
+      val = static_cast<key_type>(x * (rand_max - build_tbl_size) + build_tbl_size);
     }
     probe_tbl[idx] = val;
   }
