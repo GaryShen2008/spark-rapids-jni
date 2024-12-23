@@ -59,7 +59,7 @@ inner_join(table_view const& left_input,
         SortHashJoinV1 shj(left_input, right_input, 0, 14, circular_buffer_size, stream, mr);
         return shj.join();
       } else {
-        SortHashJoinV1 shj(right_input, left_input, 0, 13, circular_buffer_size, stream, mr);
+        SortHashJoinV1 shj(right_input, left_input, 0, 14, circular_buffer_size, stream, mr);
         auto [right_result, left_result] = shj.join();
         return std::pair(std::move(left_result), std::move(right_result));
       }
