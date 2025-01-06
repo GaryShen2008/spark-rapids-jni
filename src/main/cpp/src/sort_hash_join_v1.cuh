@@ -167,7 +167,8 @@ public:
         mr.deallocate_async(r_match_idx, sizeof(int) * circular_buffer_size, stream);
         mr.deallocate_async(s_match_idx, sizeof(int) * circular_buffer_size, stream);
 
-
+        cudaEventCreate(&start);
+        cudaEventCreate(&stop);
 //         release_mem(d_n_matches, sizeof(unsigned long long int), stream, mr);
 //         release_mem(r_offsets, sizeof(int) * n_partitions, stream, mr);
 //         release_mem(s_offsets, sizeof(int) * n_partitions, stream, mr);
