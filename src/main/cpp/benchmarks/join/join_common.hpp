@@ -49,8 +49,8 @@ using JOIN_KEY_TYPE_RANGE = nvbench::type_list<nvbench::int32_t>;
 using JOIN_NULLABLE_RANGE = nvbench::enum_type_list<false>;
 using tracking_adaptor = rmm::mr::tracking_resource_adaptor<rmm::mr::device_memory_resource>;
 
-auto const JOIN_SIZE_RANGE = std::vector<nvbench::int64_t>{67108864};
-auto const JOIN_SIZE_RANGE2 = std::vector<nvbench::int64_t>{134217728};
+auto const JOIN_SIZE_RANGE = std::vector<nvbench::int64_t>{1000000};
+auto const JOIN_SIZE_RANGE2 = std::vector<nvbench::int64_t>{2000000};
 
 struct null75_generator {
   thrust::minstd_rand engine;
@@ -148,9 +148,9 @@ void BM_join(state_type& state, Join JoinFunc, bool gather = false, bool shGathe
   CUDF_CHECK_CUDA(0);
 
   cudf::table_view right_table(
-    {right_key_column0->view(), right_key_column1->view(), *right_payload_column});
+    {right_key_column0->view(), right_key_column1->view(), *right_payload_column, *right_payload_column});
   cudf::table_view left_table(
-    {left_key_column0->view(), left_key_column1->view(), *left_payload_column});
+    {left_key_column0->view(), left_key_column1->view(), *left_payload_column, *left_payload_column, *left_payload_column});
 
   // Setup join parameters and result table
   [[maybe_unused]] std::vector<cudf::size_type> columns_to_join = {0};
@@ -196,8 +196,9 @@ void BM_join(state_type& state, Join JoinFunc, bool gather = false, bool shGathe
             auto right_result = cudf::gather(right_table, right_indices_col, cudf::out_of_bounds_policy::DONT_CHECK);
           }
           else if (shGather){
-//            auto* mr = (tracking_adaptor*)rmm::mr::get_current_device_resource();
-//            std::cout <<"in gather: allocated2: " << mr->get_allocated_bytes() << std::endl;
+// auto* mr = (tracking_adaptor*)rmm::mr::get_current_device_resource();
+// std::cout <<"in gather: allocated2: " << mr->get_allocated_bytes() << std::endl;
+
             auto left_result  = spark_rapids_jni::gather(left_table, left_indices_col, cudf::out_of_bounds_policy::DONT_CHECK);
             auto right_result = spark_rapids_jni::gather(right_table, right_indices_col, cudf::out_of_bounds_policy::DONT_CHECK);
           }

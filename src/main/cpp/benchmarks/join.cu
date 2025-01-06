@@ -96,7 +96,7 @@ NVBENCH_BENCH_TYPES(nvbench_inner_join2, NVBENCH_TYPE_AXES(JOIN_KEY_TYPE_RANGE, 
   .set_name("inner_join2")
   .set_type_axes_names({"Key", "Nullable"})
   .add_int64_axis("left_size", JOIN_SIZE_RANGE)
-  .add_int64_axis("right_size", JOIN_SIZE_RANGE);
+  .add_int64_axis("right_size", JOIN_SIZE_RANGE2);
 //
 //
 NVBENCH_BENCH_TYPES(nvbench_sort_hash_join, NVBENCH_TYPE_AXES(JOIN_KEY_TYPE_RANGE, JOIN_NULLABLE_RANGE))
@@ -110,4 +110,4 @@ NVBENCH_BENCH_TYPES(nvbench_sort_hash_join2, NVBENCH_TYPE_AXES(JOIN_KEY_TYPE_RAN
   .set_name("inner_join_bucket2")
   .set_type_axes_names({"Key", "Nullable"})
   .add_int64_axis("left_size", JOIN_SIZE_RANGE)
-  .add_int64_axis("right_size", JOIN_SIZE_RANGE);
+  .add_int64_axis("right_size", JOIN_SIZE_RANGE2);
