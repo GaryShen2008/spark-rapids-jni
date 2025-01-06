@@ -57,10 +57,13 @@ inner_join(table_view const& left_input,
   try{
       if(num_s > num_r){
         SortHashJoinV1 shj(left_input, right_input, 0, 10, circular_buffer_size, stream, mr);
-        return shj.join();
+        auto result = shj.join();
+        std::cout << "partition time: " << shj.partition_time << std::endl;
+        return result;
       } else {
         SortHashJoinV1 shj(right_input, left_input, 0, 10, circular_buffer_size, stream, mr);
         auto [right_result, left_result] = shj.join();
+        std::cout << "partition time: " << shj.partition_time << std::endl;
         return std::pair(std::move(left_result), std::move(right_result));
       }
   } catch (const std::exception& e) {
@@ -82,7 +85,7 @@ inner_join(table_view const& left_input,
 //           // Set memory to 0 for s_match_uvector
 //           cudaMemsetAsync(s_match_uvector->data(), 0, s_match_uvector->size() * sizeof(cudf::size_type), stream);
 //           return std::make_pair(std::move(r_match_uvector), std::move(s_match_uvector));
-  //std::cout << "partition time: " << shj.partition_time << std::endl;
+ // std::cout << "partition time: " << shj.partition_time << std::endl;
   //std::cout << "join time: "<< shj.join_time << std::endl;
   //     std::cout << "copy_device_vector_time: "<< shj.copy_device_vector_time << std::endl;
   //     std::cout << "partition_pair1 time: "<< shj.partition_pair1 << std::endl;

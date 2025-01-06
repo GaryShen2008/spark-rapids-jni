@@ -97,7 +97,12 @@ public:
         //CUDA_CHECK(cudaGetLastError()); // Check for kernel launch errors
 
         fill_sequence<<<num_tb(ns), 1024>>>((int*)(skeys_partitions_tmp), 0, ns);
+
+
         //CUDA_CHECK(cudaGetLastError()); // Check for kernel launch errors
+
+        cudaEventCreate(&start);
+        cudaEventCreate(&stop);
 
     }
 
@@ -119,7 +124,7 @@ public:
     std::pair<std::unique_ptr<rmm::device_uvector<cudf::size_type>>,
               std::unique_ptr<rmm::device_uvector<cudf::size_type>>> join(){
 
-       partition();
+       TIME_FUNC_ACC(partition(), partition_time);
        join_copartitions();
 
        //std::cout << "n_matches: " << n_matches << "\n";
@@ -427,4 +432,7 @@ private:
     key_t*  svals_partitions{nullptr};
     int*   r_match_idx     {nullptr};
     int*   s_match_idx     {nullptr};
+
+    cudaEvent_t start;
+    cudaEvent_t stop;
 };
