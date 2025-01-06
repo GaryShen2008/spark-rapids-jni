@@ -317,8 +317,8 @@ private:
 
 
         generate_work_units<<<num_tb(n_partitions,512),512>>>(r_offsets, s_offsets, r_work, s_work, total_work, n_partitions, threshold);
-        int total;
-        cudaMemcpy(&total, total_work, sizeof(total), cudaMemcpyDeviceToHost);
+        //int total;
+        //cudaMemcpy(&total, total_work, sizeof(total), cudaMemcpyDeviceToHost);
         //std::cout << "total work: " << total << "\n";
 //         std::cout << "total work:";
 //         print_gpu_arr(total_work, 1);
