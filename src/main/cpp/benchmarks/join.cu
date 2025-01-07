@@ -83,7 +83,7 @@ void nvbench_sort_hash_join2(nvbench::state& state, nvbench::type_list<Key, nvbe
     return spark_rapids_jni::inner_join(left_input, right_input, compare_nulls);
   };
   BM_join<Key, Nullable>(state, join, true, false);
-  std::cout << "Current allocated bytes3: " << mr.get_allocated_bytes() << std::endl;
+  std::cout << "Current allocated bytes3 : " << mr.get_allocated_bytes() << std::endl;
 }
 
 NVBENCH_BENCH_TYPES(nvbench_inner_join, NVBENCH_TYPE_AXES(JOIN_KEY_TYPE_RANGE, JOIN_NULLABLE_RANGE))
