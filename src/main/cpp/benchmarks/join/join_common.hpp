@@ -148,9 +148,9 @@ void BM_join(state_type& state, Join JoinFunc, bool gather = false, bool shGathe
   CUDF_CHECK_CUDA(0);
 
   cudf::table_view right_table(
-    {right_key_column0->view(), right_key_column1->view(), *right_payload_column, *right_payload_column, *right_payload_column});
+    {right_key_column0->view(), right_key_column1->view(), /**right_payload_column, *right_payload_column, *right_payload_column*/});
   cudf::table_view left_table(
-    {left_key_column0->view(), left_key_column1->view(), *left_payload_column, *left_payload_column, *left_payload_column});
+    {left_key_column0->view(), left_key_column1->view(), /**left_payload_column, *left_payload_column, *left_payload_column*/});
 
   // Setup join parameters and result table
   [[maybe_unused]] std::vector<cudf::size_type> columns_to_join = {0};
