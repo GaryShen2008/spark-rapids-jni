@@ -58,6 +58,14 @@ public:
         cudaEventCreate(&stop);
     }
 
+    std::unique_ptr<cudf::table> materialize_by_gather2(){
+        auto result = materialize_by_gather();
+
+        return result;
+
+    }
+
+
     std::unique_ptr<cudf::table> materialize_by_gather() {
         key_t* keys  {nullptr};
 
