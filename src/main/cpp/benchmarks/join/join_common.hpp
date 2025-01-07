@@ -80,7 +80,7 @@ void BM_join(state_type& state, Join JoinFunc, bool gather = false, bool shGathe
     state.skip("Skip large left table");
   }
 
-  double const selectivity = 1;
+  double const selectivity = 0.5;
   int const multiplicity   = 1;
 
   // Generate build and probe tables
