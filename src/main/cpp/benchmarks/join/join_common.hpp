@@ -49,7 +49,7 @@ using JOIN_KEY_TYPE_RANGE = nvbench::type_list<nvbench::int32_t>;
 using JOIN_NULLABLE_RANGE = nvbench::enum_type_list<false>;
 using tracking_adaptor = rmm::mr::tracking_resource_adaptor<rmm::mr::device_memory_resource>;
 
-auto const JOIN_SIZE_RANGE = std::vector<nvbench::int64_t>{402653184};
+auto const JOIN_SIZE_RANGE = std::vector<nvbench::int64_t>{402653184 / 4};
 auto const JOIN_SIZE_RANGE2 = std::vector<nvbench::int64_t>{402653184 };
 
 struct null75_generator {
@@ -80,7 +80,7 @@ void BM_join(state_type& state, Join JoinFunc, bool gather = false, bool shGathe
     state.skip("Skip large left table");
   }
 
-  double const selectivity = 0.0625;
+  double const selectivity = 1;
   int const multiplicity   = 1;
 
   // Generate build and probe tables
