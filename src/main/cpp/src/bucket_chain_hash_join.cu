@@ -58,12 +58,12 @@ inner_join(table_view const& left_input,
       if(num_s > num_r){
         SortHashJoin shj(left_input, right_input, 0, 17, circular_buffer_size, stream, mr);
         auto result = shj.join();
-        std::cout << "partition time: " << shj.partition_time << std::endl;
+        //std::cout << "partition time: " << shj.partition_time << std::endl;
         return result;
       } else {
         SortHashJoin shj(right_input, left_input, 0, 17, circular_buffer_size, stream, mr);
         auto [right_result, left_result] = shj.join();
-        std::cout << "partition time: " << shj.partition_time << std::endl;
+        //std::cout << "partition time: " << shj.partition_time << std::endl;
         return std::pair(std::move(left_result), std::move(right_result));
       }
   } catch (const std::exception& e) {
