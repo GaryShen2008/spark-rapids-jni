@@ -85,7 +85,7 @@ inner_join(table_view const& left_input,
 //           // Set memory to 0 for s_match_uvector
 //           cudaMemsetAsync(s_match_uvector->data(), 0, s_match_uvector->size() * sizeof(cudf::size_type), stream);
 //           return std::make_pair(std::move(r_match_uvector), std::move(s_match_uvector));
- // std::cout << "partition time: " << shj.partition_time << std::endl;
+  std::cout << "partition time: " << shj.partition_time << std::endl;
   //std::cout << "join time: "<< shj.join_time << std::endl;
   //     std::cout << "copy_device_vector_time: "<< shj.copy_device_vector_time << std::endl;
   //     std::cout << "partition_pair1 time: "<< shj.partition_pair1 << std::endl;
