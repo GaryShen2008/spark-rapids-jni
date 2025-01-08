@@ -367,7 +367,7 @@ private:
         size_t sm_bytes = (bucket_size + 512) * (sizeof(key_t) + sizeof(int) + sizeof(int16_t)) + // elem, payload and next resp.
                        (1 << LOCAL_BUCKETS_BITS) * sizeof(int32_t) + // hash table head
                         + SHUFFLE_SIZE * (NT/32) * (sizeof(key_t) + sizeof(int)*2);
-        //std::cout << "sm_bytes: " << sm_bytes << std::endl;
+        std::cout << "sm_bytes: " << sm_bytes << std::endl;
 //         cub::CountingInputIterator<int> r_itr(0);
 //         cub::CountingInputIterator<int> s_itr(0);
 
