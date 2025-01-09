@@ -30,6 +30,7 @@ void partition(){
 }
 
 void join_copartitions(){
+
     CHECK_LAST_CUDA_ERROR();
     constexpr int NT = 512;
     constexpr int VT = 4;
@@ -53,15 +54,6 @@ void join_copartitions(){
     CHECK_LAST_CUDA_ERROR();
     cudaMemcpy(&n_matches, d_n_matches, sizeof(n_matches), cudaMemcpyDeviceToHost);
 }
-
-// std::pair<std::unique_ptr<rmm::device_uvector<size_type>>,
-//           std::unique_ptr<rmm::device_uvector<size_type>>>
-// join(rmm::cuda_stream_view stream, rmm::device_async_resource_ref mr){
-//
-//
-//
-// }
-
 
 template<typename KeyT, typename ValueT>
 void partition_pairs(KeyT* keys, ValueT* values, KeyT* keys_out, ValueT* values_out, int* offsets, const int num_items){

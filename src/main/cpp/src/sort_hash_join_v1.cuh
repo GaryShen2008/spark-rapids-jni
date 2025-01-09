@@ -44,10 +44,7 @@ public:
         nr = static_cast<int>(r.num_rows());
         ns = static_cast<int>(s.num_rows());
 
-        //coarse_radix_bits = 6;
-
         n_partitions = (1 << radix_bits);
-        //n_coarse_partitions = (1 << coarse_radix_bits);
 
         try {
             // Memory allocations with error handling
@@ -82,15 +79,12 @@ public:
             std::cerr << "ns: " << ns << "\n";
             std::cerr <<  "circular_buffer_size: " << circular_buffer_size << "\n";
             std::cerr << "Exception caught during memory allocation or kernel execution !!!:  " << e.what() << std::endl;
-            //cleanup_resources(); // Free any resources already allocated
+
             throw; // Re-throw the exception if necessary
         } catch (...) {
-            // Catch all other exceptions
             std::cerr << "Unknown exception caught during memory allocation or kernel execution." << std::endl;
-            //cleanup_resources(); // Free any resources already allocated
             throw; // Re-throw the exception if necessary
         }
-
 
         // Kernel launches with error handling
         fill_sequence<<<num_tb(nr), 1024>>>((int*)(rkeys_partitions_tmp), 0, nr);
@@ -98,40 +92,17 @@ public:
 
         fill_sequence<<<num_tb(ns), 1024>>>((int*)(skeys_partitions_tmp), 0, ns);
 
-
         //CUDA_CHECK(cudaGetLastError()); // Check for kernel launch errors
-
         cudaEventCreate(&start);
         cudaEventCreate(&stop);
-
     }
 
-    static std::unique_ptr<cudf::table> gatherTest() {
-        // Create a column with 5 integers
-        auto column = cudf::make_numeric_column(cudf::data_type(cudf::type_id::INT32), 5);
-        auto mutable_view = column->mutable_view();
-
-        // Fill the column with the value 1
-        cudf::fill_in_place(mutable_view, 0, 5, cudf::numeric_scalar<int32_t>(1));
-
-        // Create a table from the column
-        std::vector<std::unique_ptr<cudf::column>> columns;
-        columns.push_back(std::move(column));
-
-        return std::make_unique<cudf::table>(std::move(columns));
-    }
 
     std::pair<std::unique_ptr<rmm::device_uvector<cudf::size_type>>,
               std::unique_ptr<rmm::device_uvector<cudf::size_type>>> join(){
 
        TIME_FUNC_ACC(partition(), partition_time);
        join_copartitions();
-
-       //std::cout << "n_matches: " << n_matches << "\n";
-//        print_gpu_arr(r_match_idx, n_matches);
-//        print_gpu_arr(s_match_idx, n_matches);
-
-      //join_copartitions();
 
        try{
             //std::cout << "n_matches: " <<  n_matches << "\n";
@@ -169,22 +140,6 @@ public:
 
         cudaEventCreate(&start);
         cudaEventCreate(&stop);
-//         release_mem(d_n_matches, sizeof(unsigned long long int), stream, mr);
-//         release_mem(r_offsets, sizeof(int) * n_partitions, stream, mr);
-//         release_mem(s_offsets, sizeof(int) * n_partitions, stream, mr);
-//         release_mem(r_work, sizeof(uint64_t)*n_partitions*2, stream, mr);
-//         release_mem(s_work, sizeof(uint64_t)*n_partitions*2, stream, mr);
-//         release_mem(rkeys_partitions, sizeof(key_t)*(nr+2048), stream, mr);
-//         release_mem(skeys_partitions, sizeof(key_t)*(ns+2048), stream, mr);
-//         release_mem(rvals_partitions, sizeof(key_t)*(nr+2048), stream, mr);
-//         release_mem(svals_partitions, sizeof(key_t)*(ns+2048), stream, mr);
-//         release_mem(total_work, sizeof(int), stream, mr);
-//
-//         release_mem(r_match_idx, sizeof(int)*circular_buffer_size, stream, mr);
-//         release_mem(s_match_idx, sizeof(int)*circular_buffer_size,stream, mr);
-
-//         cudaEventDestroy(start);
-//         cudaEventDestroy(stop);
     }
 
 public:
@@ -256,22 +211,6 @@ private:
         ssp.process();
     }
 
-//     void in_copy(key_t** arr, cudf::table_view table, int index){
-//         cudf::column_view first_column = table.column(index);
-//         cudf::data_type dtype_r = first_column.type();
-//         const void* data_ptr_r;
-//         if (dtype_r.id() == cudf::type_id::INT32) {
-//             // The column type is INT32
-//             data_ptr_r = static_cast<const void*>(first_column.data<int32_t>());
-//             // Proceed with your INT32-specific logic here
-//         } else {
-//             // Handle other data types or throw an error if INT32 is required
-//              throw std::runtime_error("R key type not supported");
-//         }
-//         *arr = const_cast<key_t*>(reinterpret_cast<const key_t*>(data_ptr_r));
-//     }
-
-
     void partition() {
 
         key_t* rkeys  {nullptr};
@@ -310,51 +249,8 @@ private:
 
         release_mem(rkeys_partitions_tmp, sizeof(key_t)*(nr+2048), stream, mr);
         release_mem(skeys_partitions_tmp, sizeof(key_t)*(ns+2048), stream, mr);
-//         TIME_FUNC_ACC(partition_pairs(rkeys, rvals,
-//                         rkeys_partitions, (key_t*)rvals_partitions,
-//                         r_offsets, nr), partition_pair1);
-
-
 
         generate_work_units<<<num_tb(n_partitions,512),512>>>(r_offsets, s_offsets, r_work, s_work, total_work, n_partitions, threshold);
-        //int total;
-        //cudaMemcpy(&total, total_work, sizeof(total), cudaMemcpyDeviceToHost);
-        //std::cout << "total work: " << total << "\n";
-//         std::cout << "total work:";
-//         print_gpu_arr(total_work, 1);
-//         std::cout << "n partitions: " << n_partitions << "\n";
-//
-//         std::cout << "r_work 0 " ;
-//         print_gpu_arr(r_work, 1);
-//
-//         std::cout << "s_work 0 ";
-//         print_gpu_arr(s_work, 1);
-//
-//         std::cout << "r_work 1 " ;
-//         print_gpu_arr(r_work + 1, 1);
-//
-//         std::cout << "s_work 1 ";
-//         print_gpu_arr(s_work + 1, 1);
-//
-//         std::cout << "r_work 500 " ;
-//         print_gpu_arr(r_work + 500, 1);
-//
-//         std::cout << "s_work 500 ";
-//         print_gpu_arr(s_work + 500, 1);
-
-        // Peek Mt + 4Mc
-        // Used mem after exit = 4 Mc
-        //print_gpu_arr(r_offsets, (size_t) n_partitions);
-//         // for test identifying large partition
-//         int* fine_partition_flags;
-//         allocate_mem(&fine_partition_flags, false, sizeof(int) * n_partitions, stream, mr);
-//         identify_large_partitions<<<(n_partitions + 255) / 256, 256>>>(r_offsets, n_partitions, 3, fine_partition_flags);
-//         print_gpu_arr(fine_partition_flags, n_partitions);
-//         int* prefix_sum;
-//         allocate_mem(&prefix_sum, false, sizeof(int) * n_partitions, stream, mr);
-//         fine_partition_prefix_sum(fine_partition_flags, prefix_sum, n_partitions, stream, mr);
-//         print_gpu_arr(prefix_sum, n_partitions);
-
     }
 
     void join_copartitions() {
@@ -368,8 +264,6 @@ private:
                        (1 << LOCAL_BUCKETS_BITS) * sizeof(int32_t) + // hash table head
                         + SHUFFLE_SIZE * (NT/32) * (sizeof(key_t) + sizeof(int)*2);
         //std::cout << "sm_bytes: " << sm_bytes << std::endl;
-//         cub::CountingInputIterator<int> r_itr(0);
-//         cub::CountingInputIterator<int> s_itr(0);
 
         auto join_fn = join_copartitions_arr_v1<NT, VT, LOCAL_BUCKETS_BITS, SHUFFLE_SIZE, key_t, int, key_t>;
         cudaFuncSetAttribute(join_fn, cudaFuncAttributeMaxDynamicSharedMemorySize, sm_bytes);

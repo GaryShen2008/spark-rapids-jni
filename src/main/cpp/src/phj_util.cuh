@@ -917,21 +917,4 @@ __global__ void join_copartitions (
             //keys_out[w_pos] = warp_shuffle->key_elem[lid];
         }
     }
-    // Print some values from R
-    /*
-    if (threadIdx.x == 0 && blockIdx.x == 0) {
-        printf("First few values of R output:\n");
-        for (int i = 0; i < 4 ; ++i) {
-             printf("r_output[%d] = %d\n", i, r_output[i]);
-
-        }
-    }
-    if (threadIdx.x == 0 && blockIdx.x == 0) {
-        printf("First few values of S output:\n");
-        for (int i = 0; i < 4 ; ++i) {
-             printf("s_output[%d] = %d\n", i, s_output[i]);
-
-        }
-    }
-    */
 }

@@ -60,11 +60,8 @@ public:
 
     std::unique_ptr<cudf::table> materialize_by_gather2(){
         auto result = materialize_by_gather();
-
         return result;
-
     }
-
 
     std::unique_ptr<cudf::table> materialize_by_gather() {
         key_t* keys  {nullptr};
@@ -128,7 +125,6 @@ public:
     ~SortHashGather() {
         release_mem(keys_partitions, sizeof(key_t)*(circular_buffer+2048), stream, mr);
         release_mem(vals_partitions, sizeof(int32_t)*(circular_buffer+2048), stream, mr);
-
         cudaEventDestroy(start);
         cudaEventDestroy(stop);
     }
@@ -139,7 +135,6 @@ public:
 
 private:
     void in_copy(key_t** arr, cudf::table_view table, int index){
-
         // Get the column_view for the first column (index 0) because we only support single key join now.
         cudf::column_view first_column = table.column(index);
         //std::cout << first_column.size() << std::endl;
@@ -154,7 +149,6 @@ private:
             // Handle other data types or throw an error if INT32 is required
              throw std::runtime_error("R key type not supported");
         }
-
         *arr = const_cast<key_t*>(reinterpret_cast<const key_t*>(data_ptr_r));
     }
 
@@ -169,7 +163,6 @@ private:
             // Handle other data types or throw an error if INT32 is required
              throw std::runtime_error("R key type not supported");
         }
-
         *arr = const_cast<key_t*>(reinterpret_cast<const key_t*>(data_ptr_r));
     }
 
@@ -187,8 +180,6 @@ private:
     }
 
 private:
-
-    // Add tracking resource as a member
 
     const cudf::table_view source_table;
 

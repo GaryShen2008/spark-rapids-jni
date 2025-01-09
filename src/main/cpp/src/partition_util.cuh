@@ -134,21 +134,15 @@ public:
             allocate_mem(&d_temp_storage, false, temp_storage_bytes, stream, mr);
         }catch (const std::bad_alloc& e) {
             std::cerr << "Memory allocation failed: 2: " << temp_storage_bytes << " " << sizeof(int)*(n_partitions) << std::endl;
-
             // Handle the error, e.g., by freeing up other resources
         } catch (const std::exception& e) {
             std::cerr << "An unexpected error occurred: 2" << e.what() << std::endl;
         }
-
     }
 
     ~SinglePassPartition() {
-        //std::cout << "released." << std::endl;
-        //TIME_FUNC_ACC(release_mem(d_temp_storage), test_Time4);
         release_mem(d_temp_storage, temp_storage_bytes, stream, mr);
-        //std::cout << "test_time4: " << test_Time4 << std::endl;
         release_mem(d_counts_out, sizeof(int), stream, mr);
-        //std::cout << "test_time5: " << test_Time5 << std::endl;
     }
 
     template<typename T>
@@ -164,9 +158,7 @@ public:
     };
     
     void process() {
-       //std::cout << radix_bits;
        if(values == nullptr){
-           //TIME_FUNC_ACC(cub::DeviceRadixSort::SortKeys(d_temp_storage, temp_storage_bytes, keys, keys_out, N, begin_bit, end_bit), test_Time);
            cub::DeviceRadixSort::SortKeys(d_temp_storage, temp_storage_bytes, keys, keys_out, N, begin_bit, end_bit);
        }
        else {
@@ -175,7 +167,6 @@ public:
        if(offsets) {
            RadixExtractor<key_t> conversion_op(begin_bit, end_bit);
            cub::TransformInputIterator<key_t, RadixExtractor<key_t>, key_t*> itr(keys_out, conversion_op);
-
            size_t temp = 0;
            cub::DeviceHistogram::HistogramEven(nullptr, temp, itr, d_counts_out, n_partitions+1, 0, n_partitions, N);
            if(temp > temp_storage_bytes) {
@@ -187,7 +178,6 @@ public:
            // offsets = [23, 41, 66, 85, 100] in what n th partition we have how many data falling in?
            cub::DeviceScan::InclusiveSum(d_temp_storage, temp_storage_bytes, d_counts_out, offsets, n_partitions);
        }
-
     }
 
 private:
@@ -203,15 +193,10 @@ private:
     int radix_bits;
     void* d_temp_storage {nullptr};
     size_t temp_storage_bytes {0};
-
     rmm::cuda_stream_view stream;
     rmm::device_async_resource_ref mr;
-
     int*  d_counts_out {nullptr};
 };
-
-
-
 
 template<int NT = 512,
          int VT = 4,

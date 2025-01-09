@@ -82,23 +82,9 @@ public:
             allocate_mem(&heads_S[i], false, parts2 * sizeof(uint64_t));
             allocate_mem(&buckets_used_S[i], false, sizeof(uint32_t));
         }
-
         bucket_info_R = (uint32_t*)s_val_partitions_temp;
-
         allocate_mem(&d_n_matches);
-
-
    }
-
-    // Just for testing if I can use cudf to allocate memory.
-    void test_column_factories() {
-        std::cout << "Hello I am here: " << std::endl;
-        auto empty_col = cudf::make_empty_column(cudf::data_type{cudf::type_id::INT32});
-        std::cout << "Empty column size: " << empty_col->size() << std::endl;
-
-        auto numeric_col = cudf::make_numeric_column(cudf::data_type{cudf::type_id::FLOAT64}, 1000);
-        std::cout << "Numeric column size: " << numeric_col->size() << std::endl;
-    }
 
     std::pair<std::unique_ptr<rmm::device_uvector<cudf::size_type>>,
               std::unique_ptr<rmm::device_uvector<cudf::size_type>>> join(rmm::cuda_stream_view stream,
@@ -120,24 +106,6 @@ public:
         return std::make_pair(std::move(r_match_uvector), std::move(s_match_uvector));
     }
 
-
-
-/*
-    void print_match_indices() {
-        std::cout << "n_matches: " << n_matches << std::endl;
-        std::cout << "r_match_idx: ";
-        for (int i = 0; i < n_matches; ++i) {
-            std::cout << host_r_match_idx[i] << " ";
-        }
-        std::cout << std::endl;
-
-        std::cout << "s_match_idx: ";
-        for (int i = 0; i < n_matches; ++i) {
-                std::cout << host_s_match_idx[i] << " ";
-        }
-        std::cout << std::endl;
-    }
-*/
     ~PartitionHashJoin() {}
 
 public:
@@ -165,7 +133,7 @@ private:
         }
     }
 
-    //
+
     template<typename KeyT, typename val_t>
     void partition(KeyT* keys, KeyT* keys_out,
                        val_t* vals, val_t* vals_out, int n, int buckets_num,
@@ -180,7 +148,7 @@ private:
 
         const int sm_counts = 80; // need to change later.
 
-      // Initialize Metadata:
+        // Initialize Metadata:
         // init_metadata_double: A CUDA kernel that initializes metadata for buckets, such as heads, chains, and counts.
         init_metadata_double<<<sm_counts, NT, 0>>> (
             heads[0], buckets_used[0], chains[0], cnts[0],
@@ -259,10 +227,10 @@ private:
                                     (1 << LOCAL_BUCKETS_BITS) * sizeof(int32_t) + // hash table head
                                     + SHUFFLE_SIZE * (NT/32) * (sizeof(key_t) + sizeof(int)*2);
         //std::cout << "sm_bytes: " << sm_bytes << std::endl;
-                    // join_fn: An alias for the kernel join_copartitions, configured with specific template parameters like thread count (NT),
-                    // vector length (VT), and data types.
-         auto join_fn = join_copartitions<NT, VT, LOCAL_BUCKETS_BITS, SHUFFLE_SIZE, key_t, int>;
-                    // cudaFuncSetAttribute: Sets the maximum dynamic shared memory size for join_fn to sm_bytes.
+
+
+        auto join_fn = join_copartitions<NT, VT, LOCAL_BUCKETS_BITS, SHUFFLE_SIZE, key_t, int>;
+        // cudaFuncSetAttribute: Sets the maximum dynamic shared memory size for join_fn to sm_bytes.
         cudaFuncSetAttribute(join_fn, cudaFuncAttributeMaxDynamicSharedMemorySize, sm_bytes);
         join_fn<<<(1 << (log_parts1+log_parts2)), NT, sm_bytes>>>
                     (r_key_partitions, (int*)(r_val_partitions),
@@ -273,7 +241,7 @@ private:
                       d_n_matches,
                       nullptr, r_match_idx, s_match_idx, circular_buffer_size);
 
-        //  transfers data from the GPU to the host (CPU).
+        // transfers data from the GPU to the host (CPU).
         cudaMemcpy(&n_matches, d_n_matches, sizeof(n_matches), cudaMemcpyDeviceToHost);
     }
 
