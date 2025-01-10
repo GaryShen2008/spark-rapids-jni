@@ -21,7 +21,7 @@
 #include <thrust/host_vector.h>
 #include "utils.cuh"
 
-#include "phj_util.cuh"
+
 #include "partition_util.cuh"
 
 #include <cudf/column/column_view.hpp>

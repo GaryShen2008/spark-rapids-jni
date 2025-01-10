@@ -18,7 +18,7 @@
 #include "sort_hash_join_v1.cuh"
 #include "sort_hash_join.cuh"
 #include "sort_hash_gather.cuh"
-#include "partitioned_hash_join.cuh"
+
 #include "bucket_chain_hash_join.hpp"
 
 using namespace cudf;
