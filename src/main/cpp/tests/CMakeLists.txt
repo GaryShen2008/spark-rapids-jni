@@ -82,3 +82,6 @@ ConfigureTest(PARSE_URI
 ConfigureTest(SUBSTRING_INDEX
     substring_index.cpp)
 
+ConfigureTest(HASH_JOIN
+    hash_join.cpp)
+
