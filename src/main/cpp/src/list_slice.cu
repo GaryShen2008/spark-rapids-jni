@@ -44,7 +44,7 @@ void assert_start_is_not_zero(column_device_view const& start, rmm::cuda_stream_
   bool start_valid = thrust::all_of(rmm::exec_policy(stream),
                                     thrust::make_counting_iterator(0),
                                     thrust::make_counting_iterator(start.size()),
-                                    [start] __device__(size_type index) {
+                                    [start] __device__(size_type index) -> bool {
                                       if (start.is_null(index)) return true;
                                       return start.element<int32_t>(index) != 0;
                                     });
@@ -56,7 +56,7 @@ void assert_length_is_not_negative(column_device_view const& length, rmm::cuda_s
   bool length_valid = thrust::all_of(rmm::exec_policy(stream),
                                      thrust::make_counting_iterator(0),
                                      thrust::make_counting_iterator(length.size()),
-                                     [length] __device__(size_type index) {
+                                     [length] __device__(size_type index) -> bool {
                                        if (length.is_null(index)) return true;
                                        return length.element<int32_t>(index) >= 0;
                                      });

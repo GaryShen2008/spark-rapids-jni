@@ -166,7 +166,7 @@ std::unique_ptr<column> indices_of(
     [values_sizes = values_sizes->view().begin<size_type>(),
      keys_labels  = keys_labels->view().begin<size_type>(),
      values_nulls = values_nulls->view().begin<bool>(),
-     num_keys] __device__(auto const idx) {
+     num_keys] __device__(auto const idx) -> size_type {
       if (idx < num_keys) {
         auto keys_label = keys_labels[idx];
         return values_nulls[keys_label] ? 0 : values_sizes[keys_label];
@@ -191,7 +191,7 @@ std::unique_ptr<column> indices_of(
      values_sizes = values_sizes->view().begin<size_type>(),
      num_lists,
      keys_nulls   = keys_nulls->view().begin<bool>(),
-     values_nulls = values_nulls->view().begin<bool>()] __device__(auto const offset_val) {
+     values_nulls = values_nulls->view().begin<bool>()] __device__(auto const offset_val) -> size_type {
       if (offset_val >= num_lists) return 0;
       if (keys_nulls[offset_val] || values_nulls[offset_val])
         return 0;
@@ -218,7 +218,7 @@ std::unique_ptr<column> indices_of(
     !thrust::any_of(rmm::exec_policy(stream),
                     d_total_compares_offsets,
                     d_total_compares_offsets + num_lists + 1,
-                    [] __device__(auto const total_compares) { return total_compares < 0; }),
+                    [] __device__(auto const total_compares) -> bool { return total_compares < 0; }),
     "Input Maps are too large to process");
 
   // Create an index array that maps each comparison to its corresponding key
@@ -249,17 +249,16 @@ std::unique_ptr<column> indices_of(
   // This gives us the specific value position we're comparing against
   auto values_idx = thrust::make_transform_iterator(
     thrust::make_counting_iterator(0),
-    cuda::proclaim_return_type<size_type>(
-      [d_key_index,
-       d_values_sizes_offsets,
-       d_val_offsets,
-       d_values_sizes_val_offsets = search_values.offsets_begin()] __device__(auto const idx) {
-        return d_values_sizes_offsets[d_key_index[idx]] > 0
-                 ? idx % d_values_sizes_offsets[d_key_index[idx]] +
-                     d_values_sizes_val_offsets[d_val_offsets[idx]]  // This is to add the offset of
-                                                                     // the previous row size
-                 : idx;
-      }));
+    [d_key_index,
+     d_values_sizes_offsets,
+     d_val_offsets,
+     d_values_sizes_val_offsets = search_values.offsets_begin()] __device__(auto const idx) -> size_type {
+      return d_values_sizes_offsets[d_key_index[idx]] > 0
+               ? idx % d_values_sizes_offsets[d_key_index[idx]] +
+                   d_values_sizes_val_offsets[d_val_offsets[idx]]  // This is to add the offset of
+                                                                   // the previous row size
+               : idx;
+    });
   // Use row comparator to allow nested/NULL/NaN comparisons
   auto const keys_tview   = cudf::table_view{{all_keys}};
   auto const values_tview = cudf::table_view{{all_values}};
@@ -291,7 +290,7 @@ std::unique_ptr<column> indices_of(
      d_val_offsets,
      d_comp,
      d_value_sizes_val_offsets = search_values.offsets_begin(),
-     results = results->mutable_view().template begin<size_type>()] __device__(auto const idx) {
+     results = results->mutable_view().template begin<size_type>()] __device__(auto const idx) -> void {
       if (d_comp(static_cast<lhs_index_type>(values_idx[idx]),
                  static_cast<rhs_index_type>(d_key_index[idx]))) {
         results[d_key_index[idx]] = values_idx[idx] - d_value_sizes_val_offsets[d_val_offsets[idx]];
